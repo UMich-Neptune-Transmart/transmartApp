@@ -170,7 +170,7 @@ Ext.onReady(function () {
 					        	 	validateHeatmap();
 					        	 	advancedWorkflowContextHelpId="1085";
 					        	 },
-					        	 disabled : GLOBAL.GPURL == "" 
+					        	 disabled : GLOBAL.GPURL == ""
 					         }
 					         ,
 					         {
@@ -209,8 +209,8 @@ Ext.onReady(function () {
 					        	 disabled : GLOBAL.GPURL == ""
 					         }
 					         ,
-				        	 '-' 
-					         ,					         
+				        	 '-'
+					         ,
 					         {
 					        	 text : 'Principal Component Analysis',
 					        	 disabled : true,
@@ -392,7 +392,7 @@ Ext.onReady(function () {
 					region : 'north',
 					height : 340,
 					autoScroll : true,
-					split : true,					
+					split : true,
             autoLoad: {
 						url : pageInfo.basePath+'/panels/subsetPanel.html',
 						scripts : true,
@@ -495,7 +495,7 @@ Ext.onReady(function () {
                 layout: 'fit',
                 listeners: {
                     activate: function (p) {
-                        if (isSubsetQueriesChanged(p.subsetQueries) || !Ext.get('analysis_title')) {
+                        if (isSubsetQueriesChanged(p.subsetQueries) || !Ext.get('analysisGridPanel')) {
                             runAllQueries(getSummaryGridData, p);
                             activateTab();
                             onWindowResize();
@@ -567,32 +567,34 @@ Ext.onReady(function () {
         // Data Exports
         // ************
 
-		analysisDataExportPanel = new Ext.Panel(
-				{
-					id : 'analysisDataExportPanel',
-					title : 'Data Export',
-					region : 'center',
-					split : true,
-					height : 90,
-					layout : 'fit',
-                listeners: {
-						activate : function(p) {
-                        if (isSubsetQueriesChanged(p.subsetQueries) || !Ext.get('dataTypesGridPanel')) {
-							p.body.mask("Loading...", 'x-mask-loading');
-							runAllQueries(getDatadata, p);
-			        	 	return;
-                        }
-						},
-                    'afterLayout': {
-                        fn: function (el) {
-                            onWindowResize();
-                        }
-						}
-					},
-					collapsible : true						
-				}
-		);
-		
+		if (dataExportEnabled) {
+            analysisDataExportPanel = new Ext.Panel(
+                    {
+                        id : 'analysisDataExportPanel',
+                        title : 'Data Export',
+                        region : 'center',
+                        split : true,
+                        height : 90,
+                        layout : 'fit',
+                    listeners: {
+                            activate : function(p) {
+                            if (isSubsetQueriesChanged(p.subsetQueries) || !Ext.get('dataTypesGridPanel')) {
+                                p.body.mask("Loading...", 'x-mask-loading');
+                                runAllQueries(getDatadata, p);
+                                return;
+                            }
+                            },
+                        'afterLayout': {
+                            fn: function (el) {
+                                onWindowResize();
+                            }
+                            }
+                        },
+                        collapsible : true
+                    }
+            );
+        }
+
         // ******************
         // Advanced Workflow
         // ******************
@@ -611,6 +613,9 @@ Ext.onReady(function () {
 						items : []
 						}),
 					autoScroll : true,
+                    bodyCfg: {
+                        id:'dataAssociationContent'
+                    },
                 autoLoad: {
 			        	url : pageInfo.basePath+'/dataAssociation/defaultPage',
 			           	method:'POST',
@@ -633,7 +638,7 @@ Ext.onReady(function () {
                         if (isSubsetQueriesChanged(p.subsetQueries)) {
                             runAllQueries(_activateAdvancedWorkflow, p);
 				}
-		
+
                         _activateAdvancedWorkflow();
 						},
                     'afterLayout': {
@@ -649,26 +654,27 @@ Ext.onReady(function () {
         // ******************
         // Export Jobs
         // ******************
-
-        analysisExportJobsPanel = new Ext.Panel(
-				{
-                id: 'analysisExportJobsPanel',
-                title: 'Export Jobs',
-					region : 'center',
-					split : true,
-					height : 90,
-					layout : 'fit',
-                listeners: {
-						activate : function(p) {
-                        p.body.mask("Loading...", 'x-mask-loading');
-                        getExportJobs(p)
-						},
-						deactivate: function(){
-						}
-					},
-					collapsible : true						
-				}
-		);
+        if (dataExportEnabled) {
+            analysisExportJobsPanel = new Ext.Panel(
+                {
+                    id: 'analysisExportJobsPanel',
+                    title: 'Export Jobs',
+                    region: 'center',
+                    split: true,
+                    height: 90,
+                    layout: 'fit',
+                    listeners: {
+                        activate: function (p) {
+                            p.body.mask("Loading...", 'x-mask-loading');
+                            getExportJobs(p)
+                        },
+                        deactivate: function () {
+                        }
+                    },
+                    collapsible: true
+                }
+            );
+        }
 
         /**
          * panel to display list of jobs belong to a user
@@ -714,7 +720,9 @@ Ext.onReady(function () {
             }
         );
 
-        sampleExplorerPanel = new Ext.Panel(
+/*  Removed from Neptune version.
+
+    sampleExplorerPanel = new Ext.Panel(
             {
                 id: "sampleExplorer",
                 title:"Sample Details",
@@ -726,17 +734,22 @@ Ext.onReady(function () {
                     }
                 }
             }
-        )
+        )*/
 
         resultsTabPanel.add(queryPanel);
 		resultsTabPanel.add(analysisPanel);
-		resultsTabPanel.add(analysisGridPanel);
+        if (gridViewEnabled) {
+            resultsTabPanel.add(analysisGridPanel);
+        }
         resultsTabPanel.add(dataAssociationPanel);
-		resultsTabPanel.add(analysisDataExportPanel);
-		resultsTabPanel.add(analysisExportJobsPanel);
+		if (dataExportEnabled) {
+            resultsTabPanel.add(analysisDataExportPanel);
+            resultsTabPanel.add(analysisExportJobsPanel);
+        }
 		resultsTabPanel.add(analysisJobsPanel);
 		resultsTabPanel.add(workspacePanel);
-        resultsTabPanel.add(sampleExplorerPanel);
+        //Removing from Neptune version.
+        //resultsTabPanel.add(sampleExplorerPanel);
 
         function loadResources(resources, bootstrap) {
             var scripts = [];
@@ -1827,18 +1840,20 @@ function setupDragAndDrop() {
 		return true;
 	}
 
-	/* set up drag and drop for grid */
-	var mcd = Ext.get(analysisGridPanel.body);
-	dtg = new Ext.dd.DropTarget(mcd,
-			{
-            ddGroup: 'makeQuery'
-			}
-	);
+    if (gridViewEnabled) {
+        /* set up drag and drop for grid */
+        var mcd = Ext.get(analysisGridPanel.body);
+        dtg = new Ext.dd.DropTarget(mcd,
+            {
+                ddGroup: 'makeQuery'
+            }
+        );
 
-    dtg.notifyDrop = function (source, e, data) {
-		buildAnalysis(data.node);
-		return true;
-	}
+        dtg.notifyDrop = function (source, e, data) {
+            buildAnalysis(data.node);
+            return true;
+        }
+    }
 }
 
 function getValue(node, defaultvalue)
@@ -2259,7 +2274,7 @@ function runAllQueries(callback, panel) {
         if (panel) {
             panel.body.unmask();
 		}
-		Ext.Msg.alert('Subsets are empty xx', 'All subsets are empty xx. Please select subsets.');
+		Ext.Msg.alert('Subsets are empty', 'All subsets are empty. Please select subsets.');
 	}
 
 	// setup the number of subsets that need running
@@ -2568,7 +2583,6 @@ function getNodeForAnalysis(node) {
     else {
 		return node
 	}
-	;
 	// must be a concept folder so return me
 }
 
@@ -3528,7 +3542,7 @@ function getSummaryGridData() {
 
     gridstore = new Ext.data.JsonStore(
         {
-            url : pageInfo.basePath+'/chart/basicGrid',
+            url : pageInfo.basePath+'/chart/analysisGrid',
             root : 'rows',
             fields : ['name', 'url']
         }
@@ -3538,7 +3552,6 @@ function getSummaryGridData() {
 
     var myparams = Ext.urlEncode(
         {
-            charttype : "basicgrid",
             concept_key : "",
             result_instance_id1 : GLOBAL.CurrentSubsetIDs[1],
             result_instance_id2 : GLOBAL.CurrentSubsetIDs[2]
@@ -4033,7 +4046,9 @@ function ontFilterLoaded(el, success, response, options) {
 
 function clearQuery() {
     if (confirm("Are you sure you want to clear your current analysis?")) {
-        clearAnalysisPanel();
+        if (gridViewEnabled) {
+            clearAnalysisPanel();
+        }
         resetQuery();
         clearDataAssociation();
     }

@@ -134,6 +134,9 @@ org.transmartproject.i2b2.group_id = 'Demo'
 // max genes to display after disease search
 com.recomdata.search.gene.max = 250;
 
+// enable/disable Grid View
+com.recomdata.datasetExplorer.gridViewEnabled = false
+
 // set schema names for I2B2HelperService
 com.recomdata.i2b2helper.i2b2hive = "i2b2hive"
 com.recomdata.i2b2helper.i2b2metadata = "i2b2metadata"

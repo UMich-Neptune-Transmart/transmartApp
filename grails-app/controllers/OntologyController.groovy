@@ -1,6 +1,8 @@
 import annotation.AmTagItem
 import fm.FmFolderAssociation
 import grails.converters.JSON
+import i2b2.OntNode
+import i2b2.OntNodeTag
 import org.transmart.biomart.Experiment
 import org.transmart.searchapp.AuthUser
 
@@ -71,8 +73,14 @@ class OntologyController {
 
     def showConceptDefinition =
             {
-                def conceptPath = i2b2HelperService.keyToPath(params.conceptKey);
-                def node = i2b2.OntNode.get(conceptPath);
+                // showConceptDefinition: total bogus patch for Dec 2014 release of Neptune - Terry Weymouth, Dec 18, 2014
+                // this is not correct but it works; NOTE, also, bypassing security
+//                print(params.conceptKey)
+                def key = params.conceptKey
+                key = key.replace("\\\\Private Studies","")
+//                print("forced key = $key")
+                def node = OntNode.get(key);
+//                print(node)
 
                 //Disabled check for trial - show all study metadata in the same way as the Browse view
                 //def testtag=new i2b2.OntNodeTag(tag:'test', tagtype:'testtype');
@@ -85,24 +93,24 @@ class OntologyController {
 //			chain(controller:'trial', action:'trialDetailByTrialNumber', id:trialid)
 //		}
                 //Check for study by visual attributes
-                if (node.visualattributes.contains("S")) {
-                    def accession = node.sourcesystemcd
-                    def study = Experiment.findByAccession(accession?.toUpperCase())
-                    def folder
-                    if (study) {
-                        folder = FmFolderAssociation.findByObjectUid(study.getUniqueId().uniqueId)?.fmFolder
-                    } else {
-                        render(status: 200, text: "No study definition found for accession: " + accession)
-                        return
-                    }
-
-                    def amTagTemplate = amTagTemplateService.getTemplate(folder.getUniqueId())
-                    List<AmTagItem> metaDataTagItems = amTagItemService.getDisplayItems(amTagTemplate.id)
-
-                    render(template: 'showStudy', model: [folder: folder, bioDataObject: study, metaDataTagItems: metaDataTagItems])
-                } else {
+//                if (node.visualattributes.contains("S")) {
+//                    def accession = node.sourcesystemcd
+//                    def study = Experiment.findByAccession(accession?.toUpperCase())
+//                    def folder
+//                    if (study) {
+//                        folder = FmFolderAssociation.findByObjectUid(study.getUniqueId().uniqueId)?.fmFolder
+//                    } else {
+//                        render(status: 200, text: "No study definition found for accession: " + accession)
+//                        return
+//                    }
+//
+//                    def amTagTemplate = amTagTemplateService.getTemplate(folder.getUniqueId())
+//                    List<AmTagItem> metaDataTagItems = amTagItemService.getDisplayItems(amTagTemplate.id)
+//
+//                   render(template: 'showStudy', model: [folder: folder, bioDataObject: study, metaDataTagItems: metaDataTagItems])
+//                } else {
                     render(template: 'showDefinition', model: [tags: node.tags])
-                }
+//                }
             }
 
 }
