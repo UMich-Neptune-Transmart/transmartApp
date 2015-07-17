@@ -216,9 +216,18 @@ class I2b2HelperService {
     }
 
     /**
-     * Determines if a concept key is a leaf or not
+     * Determines if a concept key is a leaf or not (by concept_key)
      */
     def Boolean isLeafConceptKey(String concept_key) {
+        // profuse appoligies to future programmers reading this code; it is clearly a mess
+        // and this is a patch on top of a mess; the correct solution is to rewrite all this code
+        // to use the API and to rewrite the underlying object class to use the API.
+        // A special case was made for across trials data, because, at this time of this change,
+        // there is no unified representation of across trials data and 'normal' data
+        def itemProbe = conceptsResourceService.getByKey(concept_key)
+        if (itemProbe instanceof org.transmartproject.db.ontology.AcrossTrialsOntologyTerm){
+            return isLeafConceptKey(itemProbe)
+        }
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
         Boolean res = false;
         Sql sql = new Sql(dataSource)
@@ -226,6 +235,28 @@ class I2b2HelperService {
             res = row.c_visualattributes.indexOf('L') > -1
         })
         return res;
+    }
+
+    /**
+     * Determines if a concept item is a leaf or not
+     */
+    def Boolean isLeafConceptKey(org.transmartproject.db.ontology.AcrossTrialsOntologyTerm conceptItem) {
+        // profuse appoligies to future programmers reading this code; it is clearly a mess
+        // and this is a patch on top of a mess; the correct solution is to rewrite all this code
+        // to use the API and to rewrite the underlying object class to use the API.
+        EnumSet probeSet = conceptItem.visualAttributes
+        if (probeSet.size() == 0) return false;
+        return probeSet.any{ it == org.transmartproject.core.ontology.OntologyTerm.VisualAttributes.LEAF }
+    }
+
+    /**
+     * Determines if a concept item is a leaf or not
+     */
+    def Boolean isLeafConceptKey(org.transmartproject.db.ontology.I2b2 conceptItem) {
+        // profuse appoligies to future programmers reading this code; it is clearly a mess
+        // and this is a patch on top of a mess; the correct solution is to rewrite all this code
+        // to use the API and to rewrite the underlying object class to use the API.
+        return conceptItem.cVisualattributes.contains("L")
     }
 
     /**
@@ -737,9 +768,19 @@ class I2b2HelperService {
     def ExportTableNew addConceptDataToTable(ExportTableNew tablein, String concept_key, String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
+        log.info "----------------------------------------------------------- start addConceptDataToTable"
+        log.info concept_key
+        log.info isLeafConceptKey(concept_key)
+
         String columnid = concept_key.encodeAsSHA1()
         String columnname = getColumnNameFromKey(concept_key).replace(" ", "_")
+
+        def itemProbe = conceptsResourceService.getByKey(concept_key)
+        log.info "----------------------------------------------------------- itemProbe"
+        log.info itemProbe.fullName
+
         if (isLeafConceptKey(concept_key)) {
+            log.info "----------------------------------------------------------- is Leaf Concept"
             /*add the column to the table if its not there*/
             if (tablein.getColumn("subject") == null) {
                 tablein.putColumn("subject", new ExportColumn("subject", "Subject", "", "string"));
@@ -749,6 +790,7 @@ class I2b2HelperService {
             }
 
             if (isValueConceptKey(concept_key)) {
+                log.info "----------------------------------------------------------- is value Concept"
                 /*get the data*/
                 String concept_cd = getConceptCodeFromKey(concept_key);
                 Sql sql = new Sql(dataSource)
@@ -776,6 +818,7 @@ class I2b2HelperService {
                 })
             } else {
                 String concept_cd = getConceptCodeFromKey(concept_key);
+                log.info "----------------------------------------------------------- is not value Concept"
                 Sql sql = new Sql(dataSource)
                 String sqlt = """SELECT PATIENT_NUM, TVAL_CHAR, START_DATE FROM OBSERVATION_FACT f WHERE CONCEPT_CD = ? AND
 				        PATIENT_NUM IN (select distinct patient_num
@@ -816,13 +859,18 @@ class I2b2HelperService {
             // Check whether the folder is valid: first find all children of the current code
             def item = conceptsResourceService.getByKey(concept_key)
 
+            log.info "----------------------------------------------------------- not identified as leaf node"
+            log.info item.class.name
+
             if (!item.children) {
                 log.debug("Can not show data in gridview for empty node: " + concept_key)
             }
 
             // All children should be leaf categorical values
             if (item.children.any {
-                return !it.cVisualattributes.contains("L") || nodeXmlRepresentsValueConcept(it.metadataxml)
+                log.info "----------------------------------------------------------- it's child class"
+                log.info item.class.name
+                return !isLeafConceptKey(it) || nodeXmlRepresentsValueConcept(it.metadataxml)
             }) {
                 log.debug("Can not show data in gridview for foldernodes with mixed type of children")
                 return tablein
