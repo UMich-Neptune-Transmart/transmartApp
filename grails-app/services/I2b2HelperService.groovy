@@ -130,7 +130,7 @@ class I2b2HelperService {
      * Gets the concept codes associated with a concept key (comma delimited string returned)
      */
     def String getConceptCodeFromKey(String key) {
-        log.trace("Getting concept codes for key:" + key);
+        log.info("Getting concept codes for key:" + key);
         //String slash="\\";
         //logMessage("Here is slash: "+slash);
         StringBuilder concepts = new StringBuilder();
@@ -212,7 +212,20 @@ class I2b2HelperService {
      * Determines if a concept key is a value concept or not
      */
     def Boolean isValueConceptKey(String concept_key) {
-        return isValueConceptCode(getConceptCodeFromKey(concept_key));
+        log.info "----------------------------------------------------------- start isValueConceptKey"
+        log.info "concept_key: " + concept_key
+        def itemProbe = conceptsResourceService.getByKey(concept_key)
+        if (itemProbe instanceof org.transmartproject.db.ontology.AcrossTrialsOntologyTerm){
+            log.info "itemProbe.modifierDimension.valueType = " + itemProbe.modifierDimension.valueType
+            def xTrialsValueConcept = itemProbe.modifierDimension.valueType.equalsIgnoreCase("N")
+            log.info "isValueConceptKey returns " + xTrialsValueConcept
+            return xTrialsValueConcept
+        }
+        def concept_code = getConceptCodeFromKey(concept_key)
+        log.info "concept_code: " + concept_code
+        def ret = isValueConceptCode(concept_code)
+        log.info "isValueConceptKey returns " + ret;
+        return ret
     }
 
     /**
@@ -441,7 +454,8 @@ class I2b2HelperService {
      * Determines if a concept code is a value concept code or not by checking the metadata xml
      */
     def Boolean isValueConceptCode(String concept_code) {
-        log.trace("Checking isValueConceptCode for code:" + concept_code);
+        log.info "----------------------------------------------------------- start isValueConceptCode"
+        log.info "(in isValueConceptCode) Checking isValueConceptCode for code:" + concept_code
         Boolean res = false;
         Sql sql = new Sql(dataSource);
         String sqlt = "SELECT C_METADATAXML FROM I2B2METADATA.I2B2 WHERE C_BASECODE = ?"
@@ -770,7 +784,7 @@ class I2b2HelperService {
 
         log.info "----------------------------------------------------------- start addConceptDataToTable"
         log.info concept_key
-        log.info isLeafConceptKey(concept_key)
+        log.info "is Leaf Concept key: " + isLeafConceptKey(concept_key)
 
         String columnid = concept_key.encodeAsSHA1()
         String columnname = getColumnNameFromKey(concept_key).replace(" ", "_")
@@ -778,9 +792,11 @@ class I2b2HelperService {
         def itemProbe = conceptsResourceService.getByKey(concept_key)
         log.info "----------------------------------------------------------- itemProbe"
         log.info itemProbe.fullName
+        log.info itemProbe.class.name
 
         if (isLeafConceptKey(concept_key)) {
             log.info "----------------------------------------------------------- is Leaf Concept"
+            log.info concept_key
             /*add the column to the table if its not there*/
             if (tablein.getColumn("subject") == null) {
                 tablein.putColumn("subject", new ExportColumn("subject", "Subject", "", "string"));
@@ -791,14 +807,16 @@ class I2b2HelperService {
 
             if (isValueConceptKey(concept_key)) {
                 log.info "----------------------------------------------------------- is value Concept"
+                log.info "concept_key = " + concept_key
                 /*get the data*/
-                String concept_cd = getConceptCodeFromKey(concept_key);
+                String concept_cd = getConceptCodeFromKey(concept_key)
+                log.info "concept_cd = " + concept_cd
+                log.info "result_instance_id = " + result_instance_id
                 Sql sql = new Sql(dataSource)
                 String sqlt = """SELECT PATIENT_NUM, NVAL_NUM, START_DATE FROM OBSERVATION_FACT f WHERE CONCEPT_CD = ? AND
 				        PATIENT_NUM IN (select distinct patient_num
 						from qt_patient_set_collection
 						where result_instance_id = ?)""";
-
                 sql.eachRow(sqlt, [
                         concept_cd,
                         result_instance_id
@@ -819,6 +837,8 @@ class I2b2HelperService {
             } else {
                 String concept_cd = getConceptCodeFromKey(concept_key);
                 log.info "----------------------------------------------------------- is not value Concept"
+                log.info "concept_key = " + concept_key
+                log.info "concept_cd = " + concept_cd
                 Sql sql = new Sql(dataSource)
                 String sqlt = """SELECT PATIENT_NUM, TVAL_CHAR, START_DATE FROM OBSERVATION_FACT f WHERE CONCEPT_CD = ? AND
 				        PATIENT_NUM IN (select distinct patient_num
@@ -860,6 +880,7 @@ class I2b2HelperService {
             def item = conceptsResourceService.getByKey(concept_key)
 
             log.info "----------------------------------------------------------- not identified as leaf node"
+            log.info "concept_key = " + concept_key
             log.info item.class.name
 
             if (!item.children) {
@@ -939,6 +960,9 @@ class I2b2HelperService {
      * Gets a distribution of information from the patient dimension table
      * */
     def HashMap<String, Integer> getPatientDemographicDataForSubset(String col, String result_instance_id) {
+
+        log.info("in getPatientDemographicDataForSubset ...")
+        log.info("args: col = " + col + ", result_instance_id = " + result_instance_id)
         checkQueryResultAccess result_instance_id
 
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
@@ -954,6 +978,7 @@ class I2b2HelperService {
             if (row[1] != 0) {
                 results.put(row[0], row[1])
                 log.trace("in row getting patient demographic data for subset")
+                log.info("Selected: " + row[0] + ", " + row[1])
             }
         })
         return results;
