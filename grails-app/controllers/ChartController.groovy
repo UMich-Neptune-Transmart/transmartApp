@@ -624,7 +624,6 @@ class ChartController {
         al.save()
 
         //XXX: session is a questionable place to store this because it breaks multi-window/tab nav
-        // but the table is used across multiple tabs: summary statistics and grid view - Terry Weymouth - July 22, 2015
         ExportTableNew table = (ExportTableNew) request.getSession().getAttribute("gridtable");
         if (table == null) {
 

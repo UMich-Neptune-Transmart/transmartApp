@@ -220,6 +220,7 @@ class I2b2HelperService {
         log.info "----------------------------------------------------------- start isValueConceptKey"
         log.info "concept_key: " + concept_key
         if (isXTrialsConcept(concept_key)) {
+            def itemProbe = conceptsResourceService.getByKey(concept_key)
             log.info "itemProbe.modifierDimension.valueType = " + itemProbe.modifierDimension.valueType
             def xTrialsValueConcept = itemProbe.modifierDimension.valueType.equalsIgnoreCase("N")
             log.info "isValueConceptKey returns " + xTrialsValueConcept
@@ -809,7 +810,7 @@ class I2b2HelperService {
 
         def xTrialsCaseFlag = isXTrialsConcept(concept_key)
 
-        log.info "is Trials case = " + xTrialsCaseFlag
+        log.info "is XTrials case = " + xTrialsCaseFlag
 
         if (isLeafConceptKey(concept_key)) {
             log.info "----------------------------------------------------------- this is a Leaf Node"
@@ -1001,6 +1002,7 @@ class I2b2HelperService {
                 """
         //log.info "sqltForModifierCd = " + sqltForModifierCd
 
+        // NOTE - XXX - Todo only setting 'age' value at this time -  value leaf node
         String modifier_cd = "SNOMED:F-08101"
         //log.info "modifier_cd = " + modifier_cd
         //log.info "result_instance_id = " + result_instance_id
