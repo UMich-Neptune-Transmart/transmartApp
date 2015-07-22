@@ -208,14 +208,18 @@ class I2b2HelperService {
         return markerType
     }
 
+    def Boolean isXTrialsConcept(String concept_key) {
+        def itemProbe = conceptsResourceService.getByKey(concept_key)
+        return (itemProbe instanceof org.transmartproject.db.ontology.AcrossTrialsOntologyTerm)
+    }
+
     /**
      * Determines if a concept key is a value concept or not
      */
     def Boolean isValueConceptKey(String concept_key) {
         log.info "----------------------------------------------------------- start isValueConceptKey"
         log.info "concept_key: " + concept_key
-        def itemProbe = conceptsResourceService.getByKey(concept_key)
-        if (itemProbe instanceof org.transmartproject.db.ontology.AcrossTrialsOntologyTerm){
+        if (isXTrialsConcept(concept_key)) {
             log.info "itemProbe.modifierDimension.valueType = " + itemProbe.modifierDimension.valueType
             def xTrialsValueConcept = itemProbe.modifierDimension.valueType.equalsIgnoreCase("N")
             log.info "isValueConceptKey returns " + xTrialsValueConcept
@@ -249,8 +253,8 @@ class I2b2HelperService {
 
         // Block of code - extracted from AcrossTrialsConceptsResourceDecorator for debugging only
         // ***************************************************************************************
-        def itemProbe = conceptsResourceService.getByKey(concept_key)
-        if (itemProbe instanceof org.transmartproject.db.ontology.AcrossTrialsOntologyTerm){
+        if (isXTrialsConcept(concept_key)) {
+            def itemProbe = conceptsResourceService.getByKey(concept_key)
             return isLeafConceptKey(itemProbe)
         }
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
@@ -803,14 +807,9 @@ class I2b2HelperService {
         String columnid = concept_key.encodeAsSHA1()
         String columnname = getColumnNameFromKey(concept_key).replace(" ", "_")
 
-        def itemProbe = conceptsResourceService.getByKey(concept_key)
-        //log.info "----------------------------------------------------------- itemProbe"
-        //log.info itemProbe.fullName
-        //log.info itemProbe.class.name
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key)
 
-
-        def xTrailsCaseFlag = (itemProbe instanceof org.transmartproject.db.ontology.AcrossTrialsOntologyTerm)
-        log.info "is xTrails case = " + xTrailsCaseFlag
+        log.info "is Trials case = " + xTrialsCaseFlag
 
         if (isLeafConceptKey(concept_key)) {
             log.info "----------------------------------------------------------- this is a Leaf Node"
@@ -824,7 +823,7 @@ class I2b2HelperService {
             }
             def valueLeafNodeFlag = isValueConceptKey(concept_key)
 
-            if (xTrailsCaseFlag) {
+            if (xTrialsCaseFlag) {
                 insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein)
             }
             else {
@@ -923,10 +922,10 @@ class I2b2HelperService {
         return tablein;
     }
 
-    def insertConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein) {
-        log.info "----------------------------------------------------------- insertConceptDataIntoTable"
+    def fetchConceptDataForTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag){
         log.info "for columnid = " + columnid
-        if (isValueConceptKey(concept_key)) {
+        def dataList = []
+        if (valueLeafNodeFlag) {
             log.info "----------------------------------------------------------- this is a value Leaf Node"
             log.info "concept_key = " + concept_key
             /*get the data*/
@@ -938,22 +937,11 @@ class I2b2HelperService {
 				        PATIENT_NUM IN (select distinct patient_num
 						from qt_patient_set_collection
 						where result_instance_id = ?)""";
-            sql.eachRow(sqlt, [
-                    concept_cd,
-                    result_instance_id
-            ], { row ->
+            sql.eachRow(sqlt, [concept_cd,result_instance_id], { row ->
                 /*If I already have this subject mark it in the subset column as belonging to both subsets*/
                 String subject = row.PATIENT_NUM
                 Double value = row.NVAL_NUM
-                if (tablein.containsRow(subject)) /*should contain all subjects already if I ran the demographics first*/ {
-                    tablein.getRow(subject).put(columnid, value.toString());
-                } else
-                /*fill the row*/ {
-                    ExportRowNew newrow = new ExportRowNew();
-                    newrow.put("subject", subject);
-                    newrow.put(columnid, value.toString());
-                    tablein.putRow(subject, newrow);
-                }
+                dataList.add(['subject':subject, 'value':value])
             })
         } else {
             String concept_cd = getConceptCodeFromKey(concept_key);
@@ -966,32 +954,40 @@ class I2b2HelperService {
 				        from qt_patient_set_collection
 						where result_instance_id = ?)""";
 
-            sql.eachRow(sqlt, [
-                    concept_cd,
-                    result_instance_id
-            ], { row ->
-                /*If I already have this subject mark it in the subset column as belonging to both subsets*/
+            sql.eachRow(sqlt, [concept_cd,result_instance_id], { row ->
                 String subject = row.PATIENT_NUM
                 String value = row.TVAL_CHAR
                 if (value == null) {
                     value = "Y";
                 }
-                if (tablein.containsRow(subject)) /*should contain all subjects already if I ran the demographics first*/ {
-                    tablein.getRow(subject).put(columnid, value.toString());
-                } else
-                /*fill the row*/ {
-                    ExportRowNew newrow = new ExportRowNew();
-                    newrow.put("subject", subject);
-                    newrow.put(columnid, value.toString());
-                    tablein.putRow(subject, newrow);
-                }
-            });
+                dataList.add(['subject':subject, 'value':value])
+            })
+        }
+        return dataList
+    }
+
+    def insertConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein) {
+        log.info "----------------------------------------------------------- insertConceptDataIntoTable"
+        log.info "for columnid = " + columnid
+        def data = fetchConceptDataForTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag)
+        data.each{
+            def subject = it.subject
+            def value = it.value
+            if (tablein.containsRow(subject)) /*should contain all subjects already if I ran the demographics first*/ {
+                tablein.getRow(subject).put(columnid, value.toString());
+            } else
+            /*fill the row*/ {
+                ExportRowNew newrow = new ExportRowNew();
+                newrow.put("subject", subject);
+                newrow.put(columnid, value.toString());
+                tablein.putRow(subject, newrow);
+            }
         }
     }
 
-    def insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein) {
-        log.info "----------------------------------------------------------- insertAcrossTrialsConceptDataIntoTable"
-        log.info "for columnid = " + columnid
+    def fetchAcrossTiralsDataForTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag){
+
+        def dataList = []
 
         Sql sql = new Sql(dataSource)
 
@@ -1025,7 +1021,18 @@ class I2b2HelperService {
             /*If I already have this subject mark it in the subset column as belonging to both subsets*/
             String subject = row.PATIENT_NUM
             Double value = row.NVAL_NUM
-            //log.info "insert at " + columnid + ": subject = " + subject + ", value = " + value
+            dataList.add(['subject':subject, 'value':value])
+        })
+    }
+
+    def insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein) {
+        log.info "----------------------------------------------------------- insertAcrossTrialsConceptDataIntoTable"
+        log.info "for columnid = " + columnid
+
+        def data = fetchAcrossTiralsDataForTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag)
+        data.each{
+            def subject = it.subject
+            def value = it.value
             if (tablein.containsRow(subject)) /*should contain all subjects already if I ran the demographics first*/ {
                 tablein.getRow(subject).put(columnid, value.toString());
             } else
@@ -1035,8 +1042,7 @@ class I2b2HelperService {
                 newrow.put(columnid, value.toString());
                 tablein.putRow(subject, newrow);
             }
-        });
-
+        }
     }
 
     /**

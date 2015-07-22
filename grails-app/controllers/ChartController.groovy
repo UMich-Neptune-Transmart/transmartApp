@@ -1065,7 +1065,10 @@ for (int i = 0; i < mapsize; i++)
                 log.info "----------------------------------------------------------- start renderConceptAnalysisNew - for value Node"
 
                 /*get the data*/
-                String parentConcept = i2b2HelperService.lookupParentConcept(i2b2HelperService.keyToPath(concept_key));
+                String partentPath = i2b2HelperService.keyToPath(concept_key);
+                String parentConcept = i2b2HelperService.lookupParentConcept(partentPath);
+                log.info("Get base concept: path = " + partentPath + ", concept = " + parentConcept)
+
                 Set<String> childConcepts = new HashSet<String>();
                 if (parentConcept == null) {
                     childConcepts.add(concept_cd);
