@@ -249,6 +249,8 @@ class ChartController {
      */
     def analysis = {
 
+        log.info "----------------------------------------------------------- analysis - starting "
+
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
         def result_instance_id2 = params.result_instance_id2;
@@ -256,10 +258,12 @@ class ChartController {
         al.save()
 
         String analysis_key = i2b2HelperService.getConceptKeyForAnalysis(concept_key);
+
+        log.info "i2b2HelperService.getConceptKeyForAnalysis(concept_key) returns " + analysis_key;
+
         PrintWriter pw = new PrintWriter(response.getOutputStream());
         pw.write("<html><head><link rel='stylesheet' type='text/css' href='${resource(dir: 'css', file: 'chartservlet.css')}'></head><body><div class='analysis'>");
         //renderConceptAnalysis(analysis_key, result_instance_id1, result_instance_id2, pw, request);
-        log.debug("in analysis controller about to run render concept: " + analysis_key + " result_instance_id1:" + result_instance_id1);
 
         // need to modify to try looking for equivalent concepts on both subsets
         //String parentConcept = i2b2HelperService.lookupParentConcept(i2b2HelperService.keyToPath(concept_key));
@@ -272,12 +276,17 @@ class ChartController {
 
         //	log.debug("child concepts: "+cconcepts);
 
-        log.debug("calling renderConceptAnalysisNew from analysis with analysis_key:" + analysis_key);
+        log.info "----------------------------------------------------------- analysis - continuing"
+        log.info("calling renderConceptAnalysisNew from analysis with analysis_key:" + analysis_key);
+        log.info("calling with result_instance_id1:" + result_instance_id1);
+        log.info("calling with result_instance_id2:" + result_instance_id2);
         renderConceptAnalysisNew(analysis_key, result_instance_id1, result_instance_id2, pw, request);
+        log.info "return from renderConceptAnalysisNew"
+        log.info "----------------------------------------------------------- analysis - continuing"
         pw.write("<hr>");
         if (!i2b2HelperService.isLeafConceptKey(analysis_key)) //must be a folder so render all the value children
         {
-            log.debug("iterating through all items in folder")
+            log.info("iterating through all items in folder")
 
             for (String c : i2b2HelperService.getChildValueConceptsFromParentKey(concept_key)) {
                 log.debug("-- rendering " + c)
@@ -290,6 +299,7 @@ class ChartController {
         }
         //renderPatientCountInfoTable(result_instance_id1, result_instance_id2, pw);
         pw.write("</div></body></html>");
+        log.info "----------------------------------------------------------- analysis - ending"
         pw.flush();
     }
 
@@ -601,6 +611,7 @@ class ChartController {
 
     def analysisGrid = {
 
+        log.info "----------------------------------------------------------- starting ChartController analysisGrid"
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
         def result_instance_id2 = params.result_instance_id2;
@@ -613,6 +624,7 @@ class ChartController {
         al.save()
 
         //XXX: session is a questionable place to store this because it breaks multi-window/tab nav
+        // but the table is used across multiple tabs: summary statistics and grid view - Terry Weymouth - July 22, 2015
         ExportTableNew table = (ExportTableNew) request.getSession().getAttribute("gridtable");
         if (table == null) {
 
@@ -628,7 +640,7 @@ class ChartController {
 
             for (int i = 0; i < keys.size(); i++) {
 
-                log.trace("adding concept data for " + keys.get(i));
+                log.info("adding concept data for " + keys.get(i));
                 if (s1) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id1);
                 if (s2) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id2);
             }
@@ -659,11 +671,13 @@ class ChartController {
         pw.write(table.toJSONObject().toString(5));
         pw.flush();
 
+        log.info "----------------------------------------------------------- ending ChartController analysisGrid"
+
         request.getSession().setAttribute("gridtable", table);
     }
 
     def clearGrid = {
-        log.debug("Clearing grid");
+        log.info("Clearing grid");
         request.getSession().setAttribute("gridtable", null);
         log.debug("Setting export filename to null, since there is nothing to export")
         request.getSession().setAttribute("expdsfilename", null);
@@ -1017,15 +1031,19 @@ for (int i = 0; i < mapsize; i++)
     }
 
     private void renderConceptAnalysisNew(String concept_key, String result_instance_id1, String result_instance_id2, PrintWriter pw, HttpServletRequest request) {
+        log.info "----------------------------------------------------------- start ChartController renderConceptAnalysisNew"
         log.debug("renderConceptAnalysisNew: rendering " + concept_key)
         try {
-            log.debug("Rendering concept analysis for concept key: " + concept_key)
+            log.info("Rendering concept analysis for concept key: " + concept_key)
             /*get variables*/
             String concept_cd = null;
             String concept_name = null;
             concept_cd = i2b2HelperService.getConceptCodeFromKey(concept_key);
             concept_name = i2b2HelperService.getShortNameFromKey(concept_key);
             log.debug("concept:" + concept_key + " - concept_cd " + concept_cd);
+
+            def leafNodeFlag = i2b2HelperService.isLeafConceptKey(concept_key)
+            def valueLeafNodeFlag = leafNodeFlag && i2b2HelperService.isValueConceptKey(concept_key)
 
             StringWriter sw1 = new StringWriter();
             StringWriter sw2 = new StringWriter();
@@ -1039,7 +1057,12 @@ for (int i = 0; i < mapsize; i++)
                 s2 = false;
             }
 
-            if (i2b2HelperService.isValueConceptCode(concept_cd)) {
+            log.info "----------------------------------------------------------- renderConceptAnalysisNew - before value test"
+            log.info "concept_cd = " + concept_cd
+
+            if (valueLeafNodeFlag) {
+
+                log.info "----------------------------------------------------------- start renderConceptAnalysisNew - for value Node"
 
                 /*get the data*/
                 String parentConcept = i2b2HelperService.lookupParentConcept(i2b2HelperService.keyToPath(concept_key));
@@ -1053,7 +1076,7 @@ for (int i = 0; i < mapsize; i++)
                 ArrayList<Double> valuesAlist3 = new ArrayList<Double>();
                 ArrayList<Double> valuesAlist4 = new ArrayList<Double>();
 
-                log.debug("A iterating through child concepts");
+                log.info("A iterating through child concepts");
                 for (c in childConcepts) {
                     log.debug("\tc: " + c);
                     valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id1));
@@ -1062,10 +1085,10 @@ for (int i = 0; i < mapsize; i++)
                     log.trace("added to values4");
                 }
 
-                log.debug("\tA done iterating through child concepts");
+                log.info("\tA done iterating through child concepts");
 
-                log.debug("\tvaluesAlist3:" + valuesAlist3);
-                log.debug("\tvaluesAlist4:" + valuesAlist4);
+                log.info("\tvaluesAlist3:" + valuesAlist3);
+                log.info("\tvaluesAlist4:" + valuesAlist4);
 
                 double[] values3 = valuesAlist3.toArray();
                 double[] values4 = valuesAlist4.toArray();
@@ -1261,8 +1284,8 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("</td></tr></td></tr></table></td></tr></table>")
 
             } else {
-                log.debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-                log.debug("Wasn't a value concept, doing a non-value concept analysis:")
+                log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+                log.info("Wasn't a value concept, doing a non-value concept analysis:")
                 HashMap<String, Integer> results1;
                 HashMap<String, Integer> results2;
                 if (s1) {
