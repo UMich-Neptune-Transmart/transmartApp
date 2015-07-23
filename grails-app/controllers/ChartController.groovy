@@ -1039,10 +1039,13 @@ for (int i = 0; i < mapsize; i++)
             String concept_name = null;
             concept_cd = i2b2HelperService.getConceptCodeFromKey(concept_key);
             concept_name = i2b2HelperService.getShortNameFromKey(concept_key);
-            log.debug("concept:" + concept_key + " - concept_cd " + concept_cd);
+            log.info("concept:" + concept_key + " - concept_cd " + concept_cd);
 
             def leafNodeFlag = i2b2HelperService.isLeafConceptKey(concept_key)
             def valueLeafNodeFlag = leafNodeFlag && i2b2HelperService.isValueConceptKey(concept_key)
+            def xTrialsFlag = i2b2HelperService.isXTrialsConcept(concept_key)
+
+            log.info("Flags: leafNodeFlag = " + leafNodeFlag + ", valueLeafNodeFlag = " + valueLeafNodeFlag + ", xTrialsFlag = " + xTrialsFlag)
 
             StringWriter sw1 = new StringWriter();
             StringWriter sw2 = new StringWriter();
@@ -1056,47 +1059,59 @@ for (int i = 0; i < mapsize; i++)
                 s2 = false;
             }
 
-            log.info "----------------------------------------------------------- renderConceptAnalysisNew - before value test"
+            log.info "----------------------------------------------------------- render - before value test"
             log.info "concept_cd = " + concept_cd
 
             if (valueLeafNodeFlag) {
 
-                log.info "----------------------------------------------------------- start renderConceptAnalysisNew - for value Node"
-
-                /*get the data*/
-                String partentPath = i2b2HelperService.keyToPath(concept_key);
-                String parentConcept = i2b2HelperService.lookupParentConcept(partentPath);
-                log.info("Get base concept: path = " + partentPath + ", concept = " + parentConcept)
-
                 Set<String> childConcepts = new HashSet<String>();
-                if (parentConcept == null) {
-                    childConcepts.add(concept_cd);
-                } else {
-                    childConcepts.addAll(i2b2HelperService.lookupChildConcepts(parentConcept, result_instance_id1, result_instance_id2));
-                }
+
+                log.info "----------------------------------------------------------- for value Node"
 
                 ArrayList<Double> valuesAlist3 = new ArrayList<Double>();
                 ArrayList<Double> valuesAlist4 = new ArrayList<Double>();
 
-                log.info("A iterating through child concepts");
-                for (c in childConcepts) {
-                    log.debug("\tc: " + c);
-                    valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id1));
-                    log.trace("added to values3");
-                    valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id2));
-                    log.trace("added to values4");
+                log.info "----------------------------------------------------------- before data fetch"
+                if (xTrialsFlag) {
+                    // NOTE: as of this implementation there is no concept_cd value for xTrials data!
+                    if (s1) valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1));
+                    if (s2) valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2));
+                    childConcepts.addAll(i2b2HelperService.fetchAcrossTrialsConceptCodes(concept_key))
+                } else {
+                    /*get the data*/
+                    String partentPath = i2b2HelperService.keyToPath(concept_key);
+                    String parentConcept = i2b2HelperService.lookupParentConcept(partentPath);
+                    log.info("Get base concept: path = " + partentPath + ", concept = " + parentConcept)
+
+                    valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(concept_cd, result_instance_id1));
+                    valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(concept_cd, result_instance_id2));
+
+                    if (parentConcept == null) {
+                        childConcepts.add(concept_cd);
+                    } else {
+                        childConcepts.addAll(i2b2HelperService.lookupChildConcepts(parentConcept, result_instance_id1, result_instance_id2));
+                    }
+
+                    log.info("Iterating through child concepts");
+                    for (c in childConcepts) {
+                        log.debug("\tc: " + c);
+                        valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id1));
+                        log.trace("added to values3");
+                        valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id2));
+                        log.trace("added to values4");
+                    }
+
+                    log.info("\tA done iterating through child concepts");
                 }
-
-                log.info("\tA done iterating through child concepts");
-
-                log.info("\tvaluesAlist3:" + valuesAlist3);
-                log.info("\tvaluesAlist4:" + valuesAlist4);
-
-                double[] values3 = valuesAlist3.toArray();
-                double[] values4 = valuesAlist4.toArray();
+                log.info "----------------------------------------------------------- after data fetch"
+                log.info("valuesAlist3:" + valuesAlist3);
+                log.info("valuesAlist4:" + valuesAlist4);
 
                 //double[] values3=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1);
                 //double[] values4=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2);
+
+                double[] values3 = valuesAlist3.toArray();
+                double[] values4 = valuesAlist4.toArray();
 
                 /*render the double histogram*/
                 HistogramDataset dataset3 = new HistogramDataset();
@@ -1106,6 +1121,7 @@ for (int i = 0; i < mapsize; i++)
                 if (s2) {
                     dataset3.addSeries("Subset 2", values4, 10, StatHelper.min(values4), StatHelper.max(values4));
                 }
+                log.info "----------------------------------------------------------- render histogram"
                 JFreeChart chart3 = ChartFactory.createHistogram(
                         "Histogram of " + concept_name,
                         null,
@@ -1121,7 +1137,7 @@ for (int i = 0; i < mapsize; i++)
                 plot3.setForegroundAlpha(0.85f);
 
                 XYBarRenderer renderer3 = (XYBarRenderer) plot3.getRenderer();
-                renderer3.setDrawBarOutline(false);
+                renderer3.setDrawBarOutline(true);
                 // flat bars look best...
                 renderer3.setBarPainter(new StandardXYBarPainter());
                 renderer3.setShadowVisible(false);
@@ -1157,14 +1173,16 @@ for (int i = 0; i < mapsize; i++)
 
                 log.debug("B getting data distribution for child concepts by trial");
 
+                log.info "----------------------------------------------------------- data by trial"
+
                 results1 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id1);
                 results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id2);
 
-                log.debug("s1: " + s1 + ", s2: " + s2 + ", results1: " + results1 + ", results2: " + results2)
-                log.debug("class of results1: " + results1.getClass() + ", class of results2:" + results2.getClass());
+                log.info("s1: " + s1 + ", s2: " + s2 + ", results1: " + results1 + ", results2: " + results2)
+                log.info("class of results1: " + results1.getClass() + ", class of results2:" + results2.getClass());
 
                 log.trace(results1 as JSON)
-                log.trace("I GOT HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                log.info "----------------------------------------------------------- render BoxAndWisker for data by trial"
                 def width = 200;
                 def offset = 40;
                 DefaultBoxAndWhiskerCategoryDataset dataset = new DefaultBoxAndWhiskerCategoryDataset();
@@ -1234,6 +1252,9 @@ for (int i = 0; i < mapsize; i++)
 
                 String filename = ServletUtilities.saveChartAsJPEG(chart, width, 300, info, request.getSession());
                 String graphURL = request.getContextPath() + "/chart/displayChart?filename=" + filename;
+
+                log.info "----------------------------------------------------------- render table for results"
+
                 pw.write("<table>");
                 pw.write("<tr><td align='center' colspan='5'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
                 pw.write("<tr>");
@@ -1279,6 +1300,7 @@ for (int i = 0; i < mapsize; i++)
                     pw.write("No results found for either " + concept_name + " or equivalent concepts for subset 1.")
                 }
                 if (s2 && results2.size() == 0) {
+                    if (s1 && results1.size() == 0) {pw.write("<br \\>")}
                     pw.write("No results found for either " + concept_name + " or equivalent concepts for subset 2.")
                 }
 
