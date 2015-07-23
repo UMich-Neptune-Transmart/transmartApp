@@ -1070,20 +1070,6 @@ class I2b2HelperService {
         }
     }
 
-    def fetchAcrossTrialsConceptCodes(concept_key)
-    {
-        log.info "----------------------------------------------------------- fetchAcrossTrialsConceptCodesForTrail"
-        log.info "for concept_key = " + concept_key
-        def List<String> codes = new ArrayList<String>()
-        def xTrialsFlag = isXTrialsConcept(concept_key)
-        if (!xTrialsFlag) {
-            log.error("Only valid for Across Trials case!")
-            return codes;
-        }
-        
-        return codes;
-    }
-
     /**
      * Gets a distribution of information from the patient dimension table
      * */
@@ -5057,33 +5043,86 @@ class I2b2HelperService {
      * for display in a distribution histogram for a given subset
      */
     def getConceptDistributionDataForValueConceptByTrial(String concept_key, String result_instance_id) {
+        log.info "----------------------------------------------------------- getConceptDistributionDataForValueConceptByTrial"
+
         checkQueryResultAccess result_instance_id
+        log.info "access assured"
+
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key)
+        log.info "xTrialsCaseFlag = " + xTrialsCaseFlag
 
         def trialdata = [:];
 
         if (result_instance_id != null && result_instance_id != "") {
             log.trace("Getting concept distribution data for value concept:" + concept_key);
+            log.info "concept_key = " + concept_key
+            log.info "result_instance_id = " + result_instance_id
+
             Sql sql = new Sql(dataSource);
-            String concept_cd = getConceptCodeFromKey(concept_key);
-            //ArrayList<Double> values=new ArrayList<Double>();
-            String sqlt = """SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f  INNER JOIN PATIENT_TRIAL t
+
+            if (xTrialsCaseFlag) {
+
+                def itemProbe = conceptsResourceService.getByKey(concept_key)
+                String column = itemProbe.factTableColumn
+                String table = itemProbe.dimensionTableName
+                String path = itemProbe.dimensionCode
+                def sqltForModifierCd = """
+                SELECT ${column} FROM ${table}
+                    WHERE modifier_path = ${path}
+                """
+                //log.info "sqltForModifierCd = " + sqltForModifierCd
+
+                // NOTE - XXX - Todo only setting 'age' value at this time -  value leaf node
+                String modifier_cd = "SNOMED:F-08101"
+                //log.info "modifier_cd = " + modifier_cd
+                //log.info "result_instance_id = " + result_instance_id
+
+                String sqlt = """
+                    SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f
+                        INNER JOIN PATIENT_TRIAL t ON f.PATIENT_NUM=t.PATIENT_NUM
+                    WHERE modifier_cd = 'SNOMED:F-08101'
+                        AND concept_cd != 'SECURITY'
+                        AND f.PATIENT_NUM IN (select distinct patient_num
+                            from qt_patient_set_collection
+                            where result_instance_id = ?)
+                    """;
+                sql.eachRow(sqlt, [
+                        result_instance_id
+                ], { row ->
+                    if (row.NVAL_NUM != null) {
+                        //add a new Array if this is the first time im hitting this trial
+                        if (!trialdata.containsKey(row.TRIAL)) {
+                            trialdata.put(row.TRIAL, [row.NVAL_NUM]);
+                        } else {
+                            trialdata[row.TRIAL].add(row.NVAL_NUM);
+                        }
+                    }
+                })
+            } else {
+
+                String concept_cd = getConceptCodeFromKey(concept_key);
+                //ArrayList<Double> values=new ArrayList<Double>();
+                String sqlt = """SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f  INNER JOIN PATIENT_TRIAL t
 			    ON f.PATIENT_NUM=t.PATIENT_NUM WHERE CONCEPT_CD = ? AND
 			    f.PATIENT_NUM IN (select distinct patient_num from qt_patient_set_collection
 				where result_instance_id = ?)""";
-            sql.eachRow(sqlt, [
-                    concept_cd,
-                    result_instance_id
-            ], { row ->
-                if (row.NVAL_NUM != null) {
-                    //add a new Array if this is the first time im hitting this trial
-                    if (!trialdata.containsKey(row.TRIAL)) {
-                        trialdata.put(row.TRIAL, [row.NVAL_NUM]);
-                    } else {
-                        trialdata[row.Trial].add(row.NVAL_NUM);
+                sql.eachRow(sqlt, [
+                        concept_cd,
+                        result_instance_id
+                ], { row ->
+                    if (row.NVAL_NUM != null) {
+                        //add a new Array if this is the first time im hitting this trial
+                        if (!trialdata.containsKey(row.TRIAL)) {
+                            trialdata.put(row.TRIAL, [row.NVAL_NUM]);
+                        } else {
+                            trialdata[row.Trial].add(row.NVAL_NUM);
+                        }
                     }
-                }
-            })
+                })
+            }
+
         }
+        log.info "----------------------------------------------------------- end getConceptDistributionDataForValueConceptByTrial"
         return trialdata;
     }
 

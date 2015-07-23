@@ -1076,7 +1076,6 @@ for (int i = 0; i < mapsize; i++)
                     // NOTE: as of this implementation there is no concept_cd value for xTrials data!
                     if (s1) valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1));
                     if (s2) valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2));
-                    childConcepts.addAll(i2b2HelperService.fetchAcrossTrialsConceptCodes(concept_key))
                 } else {
                     /*get the data*/
                     String partentPath = i2b2HelperService.keyToPath(concept_key);
@@ -1175,8 +1174,14 @@ for (int i = 0; i < mapsize; i++)
 
                 log.info "----------------------------------------------------------- data by trial"
 
-                results1 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id1);
-                results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id2);
+                if (xTrialsFlag) {
+                    // NOTE: as of this implementation there are no concept_cd values for xTrials data!
+                    if (s1) results1 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrial(concept_key, result_instance_id1)
+                    if (s2) results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrial(concept_key, result_instance_id2)
+                } else {
+                    results1 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id1);
+                    results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id2);
+                }
 
                 log.info("s1: " + s1 + ", s2: " + s2 + ", results1: " + results1 + ", results2: " + results2)
                 log.info("class of results1: " + results1.getClass() + ", class of results2:" + results2.getClass());
