@@ -717,23 +717,26 @@ class I2b2HelperService {
     def Integer getObservationCountForConceptForSubset(String concept_key, String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        log.info("Getting observation count for concept:" + concept_key + " and instance:" + result_instance_id);
+        log.trace("Getting observation count for concept:" + concept_key + " and instance:" + result_instance_id);
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
         String fullnameLike = fullname.asLikeLiteral() + "%" // Note: .asLikeLiteral() defined in github: 994dc5bb50055f8b800045f65c8e565b4aa0c113
         int i = 0;
-        log.info("sql inputs: fullnameLike = " + fullnameLike)
+        log.trace("sql inputs: fullnameLike = " + fullnameLike)
+        log.trace("\tresult_instance_id = " + result_instance_id)
         Sql sql = new Sql(dataSource);
         String sqlt = """
-            select count (*) as obscount
-            FROM i2b2demodata.observation_fact
-		    WHERE concept_cd IN (
-		            select concept_cd
-		            from i2b2demodata.concept_dimension c
-			        where concept_path LIKE ? escape '\\')
-                AND PATIENT_NUM IN (
-                    select distinct patient_num
-                    from qt_patient_set_collection
-                    where result_instance_id = ?)
+            select count(*) from (
+                select distinct patient_num
+                FROM i2b2demodata.observation_fact
+                WHERE concept_cd IN (
+                        select concept_cd
+                        from i2b2demodata.concept_dimension c
+                        where concept_path LIKE ? escape '\\')
+                    AND PATIENT_NUM IN (
+                        select distinct patient_num
+                        from qt_patient_set_collection
+                        where result_instance_id = ?)
+            ) as subjectList
         """
         sql.eachRow(sqlt, [
                 fullnameLike,
@@ -741,7 +744,7 @@ class I2b2HelperService {
         ], { row ->
             i = row[0]
         })
-        log.info("count = " + i)
+        log.trace("count = " + i)
         return i;
     }
 
