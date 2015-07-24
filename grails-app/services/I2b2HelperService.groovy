@@ -529,10 +529,47 @@ class I2b2HelperService {
         return res;
     }
 
+    def HashMap<String, Integer> getConceptDistributionDataForConcept(String concept_key, String result_instance_id) throws SQLException {
+        log.info "----------------------------------------------------------- start getConceptDistributionDataForConcept"
+        checkQueryResultAccess result_instance_id
+
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key)
+        def leafNodeFlag = isLeafConceptKey(concept_key)
+
+        HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
+
+        log.info "input concept_key = " + concept_key
+        if (leafNodeFlag) {
+            concept_key = getParentConceptKey(concept_key)
+        }
+        log.info "lookup concept_key = " + concept_key
+
+        if (xTrialsCaseFlag) {
+            log.info("NOT IMPLEMENTED - XTrials for getConceptDistributionDataForConcept")
+        } else {
+            String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
+            int i = getLevelFromKey(concept_key) + 1;
+            Sql sql = new Sql(dataSource);
+            String sqlt = """
+                SELECT DISTINCT c_name, c_fullname
+                FROM i2b2metadata.i2b2
+                WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ?
+                ORDER BY C_FULLNAME
+            """
+            log.trace(sqlt);
+            sql.eachRow(sqlt, [fullname.asLikeLiteral() + "%", i], { row ->
+                results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
+            });
+        }
+
+        log.info "getConceptDistributionDataForConcept - returns " + results
+        return results;
+    }
+
     /**
      * Gets the distribution of data for a concept
      */
-    def HashMap<String, Integer> getConceptDistributionDataForConceptOld(String concept_key, String result_instance_id) throws SQLException {
+    def HashMap<String, Integer> getConceptDistributionDataForConceptOld1(String concept_key, String result_instance_id) throws SQLException {
         checkQueryResultAccess result_instance_id
 
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length())
@@ -566,7 +603,7 @@ class I2b2HelperService {
     /**
      *  Gets the concept distributions for a concept in a subset
      */
-    def HashMap<String, Integer> getConceptDistributionDataForConcept(String concept_key, String result_instance_id) throws SQLException {
+    def HashMap<String, Integer> getConceptDistributionDataForConceptOld2(String concept_key, String result_instance_id) throws SQLException {
         log.info "----------------------------------------------------------- start getConceptDistributionDataForConcept"
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
@@ -577,9 +614,9 @@ class I2b2HelperService {
             log.info("NOT IMPLEMENTED - XTrials for getConceptDistributionDataForConcept")
         } else {
             // check to see if there is a mapping from this concept_key to a concept_key for the results
-            log.info("getConceptDistributionDataForConcept: looking up parent_concept of fullname: " + fullname)
+            log.info("looking up parent_concept of fullname: " + fullname)
             String parent_concept = lookupParentConcept(fullname);
-            log.info("getConceptDistributionDataForConcept: parent_concept: " + parent_concept);
+            log.info("parent_concept: " + parent_concept);
             Set<String> concepts = new HashSet<String>();
             if (parent_concept != null) {
                 // lookup appropriate children
@@ -591,11 +628,11 @@ class I2b2HelperService {
                 for (c in childConcepts) {
                     int i = getLevelFromKey(concept_key) + 1;
                     fullname = getConceptPathFromCode(c);
-                    log.debug("** IN LOOP: fullname: " + fullname);
+                    log.info("** IN LOOP: fullname: " + fullname);
                     Sql sql = new Sql(dataSource);
                     String sqlt =
                             "SELECT DISTINCT c_name, c_fullname FROM i2b2metadata.i2b2 WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ? ORDER BY C_FULLNAME";
-                    log.trace(sqlt);
+                    log.info(sqlt);
                     sql.eachRow(sqlt, [fullname.asLikeLiteral() + "%", i], { row ->
                         if (results.get(row[0]) == null) {
                             results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
@@ -680,19 +717,31 @@ class I2b2HelperService {
     def Integer getObservationCountForConceptForSubset(String concept_key, String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        log.trace("Getting observation count for concept:" + concept_key + " and instance:" + result_instance_id);
+        log.info("Getting observation count for concept:" + concept_key + " and instance:" + result_instance_id);
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
+        String fullnameLike = fullname.asLikeLiteral() + "%" // Note: .asLikeLiteral() defined in github: 994dc5bb50055f8b800045f65c8e565b4aa0c113
         int i = 0;
+        log.info("sql inputs: fullnameLike = " + fullnameLike)
         Sql sql = new Sql(dataSource);
-        String sqlt = """select count (*) as obscount FROM i2b2demodata.observation_fact
-		    WHERE (((concept_cd IN (select concept_cd from i2b2demodata.concept_dimension c
-			where concept_path LIKE ? escape '\\')))) AND PATIENT_NUM IN (select distinct patient_num from qt_patient_set_collection where result_instance_id = ?)""";
+        String sqlt = """
+            select count (*) as obscount
+            FROM i2b2demodata.observation_fact
+		    WHERE concept_cd IN (
+		            select concept_cd
+		            from i2b2demodata.concept_dimension c
+			        where concept_path LIKE ? escape '\\')
+                AND PATIENT_NUM IN (
+                    select distinct patient_num
+                    from qt_patient_set_collection
+                    where result_instance_id = ?)
+        """
         sql.eachRow(sqlt, [
-                fullname.asLikeLiteral() + "%", // Note: .asLikeLiteral() defined in github: 994dc5bb50055f8b800045f65c8e565b4aa0c113
+                fullnameLike,
                 result_instance_id
         ], { row ->
             i = row[0]
         })
+        log.info("count = " + i)
         return i;
     }
 
@@ -1177,20 +1226,25 @@ class I2b2HelperService {
      *  This is used when presenting results across trials
      */
     def String lookupParentConcept(String conceptPath) {
-        /*get all distinct  concepts for analysis from both subsets into hashmap*/
 
+        // DOES NOT APPEAR TO WORK - July 14, 2015 - Terry E Weymouth
+        // I believe that this might be an old implementation of xTrials
+        // In the current ETL, deapp.de_xtrial_child_map, is not populated!
+
+        /*get all distinct  concepts for analysis from both subsets into hashmap*/
+        log.info("lookupParentConcept" + conceptPath);
         try {
             Sql sql = new Sql(dataSource);
             String sqlQuery = """select parent_cd from deapp.de_xtrial_child_map xcm
 				inner join concept_dimension cd
 				on xcm.concept_cd=cd.concept_cd
 				where concept_path = ?""";
-            log.debug("\ncalled with conceptPath:" + conceptPath);
-            log.debug("\nexecuting query:" + sqlQuery);
+            log.info("\ncalled with conceptPath:" + conceptPath);
+            log.info("\nexecuting query:" + sqlQuery);
             String parentConcept = "";
             sql.eachRow(sqlQuery, [conceptPath], { row -> parentConcept = row.parent_cd; });
             if (parentConcept != "") {
-                log.debug("returning parentConcept=" + parentConcept);
+                log.info("returning parentConcept=" + parentConcept);
                 return parentConcept;
             } else {
                 return null;
@@ -1281,7 +1335,7 @@ class I2b2HelperService {
         Set<String> finalSet = new HashSet<String>();
         Set<String> parentSet = new HashSet<String>();
 
-        log.debug("getDistinctConceptSet called with arguments: " + result_instance_id1 + " and " + result_instance_id2)
+        log.info("getDistinctConceptSet called with arguments: " + result_instance_id1 + " and " + result_instance_id2)
 
         if (result_instance_id1) {
             workingSet.addAll(getConceptKeysInSubset(result_instance_id1));
@@ -1301,7 +1355,7 @@ class I2b2HelperService {
             }
         }
 
-        log.debug("getDistinctConceptSet returning set: " + finalSet);
+        log.info("getDistinctConceptSet returning set: " + finalSet);
         return finalSet;
     }
 
