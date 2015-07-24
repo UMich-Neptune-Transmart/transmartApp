@@ -1010,19 +1010,10 @@ class I2b2HelperService {
             Sql sql = new Sql(dataSource)
 
             def itemProbe = conceptsResourceService.getByKey(concept_key)
-            String column = itemProbe.factTableColumn
-            String table = itemProbe.dimensionTableName
-            String path = itemProbe.dimensionCode
-            def sqltForModifierCd = """
-                SELECT ${column} FROM ${table}
-                    WHERE modifier_path = ${path}
-                """
-            //log.info "sqltForModifierCd = " + sqltForModifierCd
+            String modifier_cd = itemProbe.modifierDimension.code
 
-            // NOTE - XXX - Todo only setting 'age' value at this time -  value leaf node
-            String modifier_cd = "SNOMED:F-08101"
-            //log.info "modifier_cd = " + modifier_cd
-            //log.info "result_instance_id = " + result_instance_id
+            // log.info "modifier_cd = " + modifier_cd
+            // log.info "result_instance_id = " + result_instance_id
 
             def sqlt = """
                 SELECT PATIENT_NUM, NVAL_NUM, START_DATE
@@ -5063,31 +5054,22 @@ class I2b2HelperService {
             if (xTrialsCaseFlag) {
 
                 def itemProbe = conceptsResourceService.getByKey(concept_key)
-                String column = itemProbe.factTableColumn
-                String table = itemProbe.dimensionTableName
-                String path = itemProbe.dimensionCode
-                def sqltForModifierCd = """
-                SELECT ${column} FROM ${table}
-                    WHERE modifier_path = ${path}
-                """
-                //log.info "sqltForModifierCd = " + sqltForModifierCd
+                String modifier_cd = itemProbe.modifierDimension.code
 
-                // NOTE - XXX - Todo only setting 'age' value at this time -  value leaf node
-                String modifier_cd = "SNOMED:F-08101"
                 //log.info "modifier_cd = " + modifier_cd
                 //log.info "result_instance_id = " + result_instance_id
 
                 String sqlt = """
                     SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f
                         INNER JOIN PATIENT_TRIAL t ON f.PATIENT_NUM=t.PATIENT_NUM
-                    WHERE modifier_cd = 'SNOMED:F-08101'
+                    WHERE modifier_cd = ?
                         AND concept_cd != 'SECURITY'
                         AND f.PATIENT_NUM IN (select distinct patient_num
                             from qt_patient_set_collection
                             where result_instance_id = ?)
                     """;
                 sql.eachRow(sqlt, [
-                        result_instance_id
+                        modifier_cd, result_instance_id
                 ], { row ->
                     if (row.NVAL_NUM != null) {
                         //add a new Array if this is the first time im hitting this trial
