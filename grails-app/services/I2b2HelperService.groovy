@@ -217,19 +217,19 @@ class I2b2HelperService {
      * Determines if a concept key is a value concept or not
      */
     def Boolean isValueConceptKey(String concept_key) {
-        log.info "----------------------------------------------------------- start isValueConceptKey"
-        log.info "concept_key: " + concept_key
+        log.trace "----------------------------------------------------------- start isValueConceptKey"
+        log.trace "concept_key: " + concept_key
         if (isXTrialsConcept(concept_key)) {
             def itemProbe = conceptsResourceService.getByKey(concept_key)
-            log.info "itemProbe.modifierDimension.valueType = " + itemProbe.modifierDimension.valueType
+            log.trace "itemProbe.modifierDimension.valueType = " + itemProbe.modifierDimension.valueType
             def xTrialsValueConcept = itemProbe.modifierDimension.valueType.equalsIgnoreCase("N")
-            log.info "isValueConceptKey returns " + xTrialsValueConcept
+            log.trace "isValueConceptKey returns " + xTrialsValueConcept
             return xTrialsValueConcept
         }
         def concept_code = getConceptCodeFromKey(concept_key)
-        log.info "concept_code: " + concept_code
+        log.trace "concept_code: " + concept_code
         def ret = isValueConceptCode(concept_code)
-        log.info "isValueConceptKey returns " + ret;
+        log.trace "isValueConceptKey returns " + ret;
         return ret
     }
 
@@ -567,45 +567,52 @@ class I2b2HelperService {
      *  Gets the concept distributions for a concept in a subset
      */
     def HashMap<String, Integer> getConceptDistributionDataForConcept(String concept_key, String result_instance_id) throws SQLException {
+        log.info "----------------------------------------------------------- start getConceptDistributionDataForConcept"
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
 
-        // check to see if there is a mapping from this concept_key to a concept_key for the results
-        log.debug("getConceptDistributionDataForConcept: looking up parent_concept of fullname: " + fullname)
-        String parent_concept = lookupParentConcept(fullname);
-        log.debug("getConceptDistributionDataForConcept: parent_concept: " + parent_concept);
-        Set<String> concepts = new HashSet<String>();
-        if (parent_concept != null) {
-            // lookup appropriate children
-            Set<String> childConcepts = lookupChildConcepts(parent_concept, result_instance_id);
-            if (childConcepts.isEmpty()) {
-                childConcepts.add(concept_key);
-            }
-            log.debug("getConceptDistributionDataForConcept: childConcepts: " + childConcepts);
-            for (c in childConcepts) {
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key)
+
+        if (xTrialsCaseFlag) {
+            log.info("NOT IMPLEMENTED - XTrials for getConceptDistributionDataForConcept")
+        } else {
+            // check to see if there is a mapping from this concept_key to a concept_key for the results
+            log.info("getConceptDistributionDataForConcept: looking up parent_concept of fullname: " + fullname)
+            String parent_concept = lookupParentConcept(fullname);
+            log.info("getConceptDistributionDataForConcept: parent_concept: " + parent_concept);
+            Set<String> concepts = new HashSet<String>();
+            if (parent_concept != null) {
+                // lookup appropriate children
+                Set<String> childConcepts = lookupChildConcepts(parent_concept, result_instance_id);
+                if (childConcepts.isEmpty()) {
+                    childConcepts.add(concept_key);
+                }
+                log.info("getConceptDistributionDataForConcept: childConcepts: " + childConcepts);
+                for (c in childConcepts) {
+                    int i = getLevelFromKey(concept_key) + 1;
+                    fullname = getConceptPathFromCode(c);
+                    log.debug("** IN LOOP: fullname: " + fullname);
+                    Sql sql = new Sql(dataSource);
+                    String sqlt =
+                            "SELECT DISTINCT c_name, c_fullname FROM i2b2metadata.i2b2 WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ? ORDER BY C_FULLNAME";
+                    log.trace(sqlt);
+                    sql.eachRow(sqlt, [fullname.asLikeLiteral() + "%", i], { row ->
+                        if (results.get(row[0]) == null) {
+                            results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
+                        } else {
+                            results.put(row[0], results.get(row[0]) + getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
+                        }
+                    })
+                }
+            } else {
                 int i = getLevelFromKey(concept_key) + 1;
-                fullname = getConceptPathFromCode(c);
-                log.debug("** IN LOOP: fullname: " + fullname);
                 Sql sql = new Sql(dataSource);
-                String sqlt =
-                        "SELECT DISTINCT c_name, c_fullname FROM i2b2metadata.i2b2 WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ? ORDER BY C_FULLNAME";
+                String sqlt = "SELECT DISTINCT c_name, c_fullname FROM i2b2metadata.i2b2 WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ? ORDER BY C_FULLNAME";
                 log.trace(sqlt);
                 sql.eachRow(sqlt, [fullname.asLikeLiteral() + "%", i], { row ->
-                    if (results.get(row[0]) == null) {
-                        results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
-                    } else {
-                        results.put(row[0], results.get(row[0]) + getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
-                    }
-                })
+                    results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
+                });
             }
-        } else {
-            int i = getLevelFromKey(concept_key) + 1;
-            Sql sql = new Sql(dataSource);
-            String sqlt = "SELECT DISTINCT c_name, c_fullname FROM i2b2metadata.i2b2 WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ? ORDER BY C_FULLNAME";
-            log.trace(sqlt);
-            sql.eachRow(sqlt, [fullname.asLikeLiteral() + "%", i], { row ->
-                results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
-            });
         }
         return results;
     }
@@ -1066,8 +1073,8 @@ class I2b2HelperService {
      * */
     def HashMap<String, Integer> getPatientDemographicDataForSubset(String col, String result_instance_id) {
 
-        log.info("in getPatientDemographicDataForSubset ...")
-        log.info("args: col = " + col + ", result_instance_id = " + result_instance_id)
+        log.trace("in getPatientDemographicDataForSubset ...")
+        log.trace("args: col = " + col + ", result_instance_id = " + result_instance_id)
         checkQueryResultAccess result_instance_id
 
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
@@ -1082,8 +1089,8 @@ class I2b2HelperService {
         sql.eachRow(sqlt, [result_instance_id], { row ->
             if (row[1] != 0) {
                 results.put(row[0], row[1])
-                log.trace("in row getting patient demographic data for subset")
-                log.info("Selected: " + row[0] + ", " + row[1])
+                //log.trace("in row getting patient demographic data for subset")
+                //log.trace("Selected: " + row[0] + ", " + row[1])
             }
         })
         return results;

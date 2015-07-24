@@ -1319,11 +1319,11 @@ for (int i = 0; i < mapsize; i++)
                 HashMap<String, Integer> results2;
                 if (s1) {
                     results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1);
-                    log.debug("concept_key:" + concept_key + ", results1: " + results1);
+                    log.info("concept_key:" + concept_key + ", results1: " + results1);
                 }
                 if (s2) {
                     results2 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id2);
-                    log.debug("concept_key:" + concept_key + ", results2: " + results2);
+                    log.info("concept_key:" + concept_key + ", results2: " + results2);
                 }
                 int height = 80 + 15 * results1.size();
                 /*printHashMap(results1, pw);*/
@@ -1362,11 +1362,12 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("<td><tr><p></table>")
 
             }
-            log.debug("renderConceptAnalysisNew: finished rendering " + concept_key)
+            log.info("renderConceptAnalysisNew: finished rendering " + concept_key)
         }
         catch (Exception e) {
             log.error(e); e.printStackTrace();
         }
+        log.info "----------------------------------------------------------- done renderConceptAnalysisNew"
     }
 
     private void renderBoxAndWhiskerInfoTableNew(List<Number> values, String trial, StringWriter pw) {
