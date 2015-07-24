@@ -1299,7 +1299,8 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("</td><tr><td align=\"center\" colspan=2>");
 
                 // significance test
-                renderTTestHashMap(results1, results2, pw);
+                if ((results1 !=  null) && !results1.isEmpty() && (results2 != null) && !results2.isEmpty() )
+                    renderTTestHashMap(results1, results2, pw);
 
                 if (s1 && results1.size() == 0) {
                     pw.write("No results found for either " + concept_name + " or equivalent concepts for subset 1.")
