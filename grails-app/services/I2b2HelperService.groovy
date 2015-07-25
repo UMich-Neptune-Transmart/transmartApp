@@ -8,9 +8,11 @@ import org.transmart.searchapp.AuthUser
 import org.transmart.searchapp.AuthUserSecureAccess
 import org.transmart.searchapp.SecureAccessLevel
 import org.transmart.searchapp.SecureObjectPath
+import org.transmartproject.core.ontology.OntologyTerm
 import org.transmartproject.db.i2b2data.ConceptDimension
 import org.transmartproject.db.i2b2data.ObservationFact
 import org.transmartproject.db.querytool.QtPatientSetCollection
+import org.transmartproject.db.ontology.AcrossTrialsOntologyTerm
 import org.w3c.dom.Document
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
@@ -210,7 +212,7 @@ class I2b2HelperService {
 
     def Boolean isXTrialsConcept(String concept_key) {
         def itemProbe = conceptsResourceService.getByKey(concept_key)
-        return (itemProbe instanceof org.transmartproject.db.ontology.AcrossTrialsOntologyTerm)
+        return (itemProbe instanceof AcrossTrialsOntologyTerm)
     }
 
     /**
@@ -270,7 +272,7 @@ class I2b2HelperService {
     /**
      * Determines if a concept item is a leaf or not
      */
-    def Boolean isLeafConceptKey(org.transmartproject.db.ontology.AcrossTrialsOntologyTerm conceptItem) {
+    def Boolean isLeafConceptKey(AcrossTrialsOntologyTerm conceptItem) {
         // profuse appoligies to future programmers reading this code; it is clearly a mess
         // and this is a patch on top of a mess; the correct solution is to rewrite all this code
         // to use the API and to rewrite the underlying object class to use the API.
@@ -545,7 +547,13 @@ class I2b2HelperService {
         log.info "lookup concept_key = " + concept_key
 
         if (xTrialsCaseFlag) {
-            log.info("NOT IMPLEMENTED - XTrials for getConceptDistributionDataForConcept")
+            log.info("XTrials for getConceptDistributionDataForConcept")
+            def node = conceptsResourceService.getByKey(concept_key)
+            def List<OntologyTerm> childNodes = node.children
+            for (OntologyTerm term: childNodes) {
+                results.put(term.name,getObservationCountForXTrailsNode(term,result_instance_id))
+            }
+
         } else {
             String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
             int i = getLevelFromKey(concept_key) + 1;
@@ -709,6 +717,57 @@ class I2b2HelperService {
             i = row[1];
         })
         return i;
+    }
+
+    def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node, String result_instance_id) {
+        log.info "----------------------------------------------------------- start getObservationCountForXTrailsNode"
+        checkQueryResultAccess result_instance_id
+
+        def modifierList = []
+        def leafNodes = getAllXTrailsLeafNodes(term_node)
+        leafNodes.each { node ->
+            modifierList.add(node.code)
+        }
+
+        Sql sql = new Sql(dataSource)
+
+        log.info "modifierList = " + modifierList
+        log.info "result_instance_id = " + result_instance_id
+
+        def sqlt = """
+            SELECT count(*) FROM (
+                SELECT distinct PATIENT_NUM
+                FROM OBSERVATION_FACT f
+                WHERE
+                    modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
+                    AND concept_cd != 'SECURITY'
+                    AND PATIENT_NUM IN (select distinct patient_num
+                        from qt_patient_set_collection
+                        where result_instance_id = ?)
+                ) as subjectList
+        """
+
+        int count = 0
+        sql.eachRow(sqlt, [result_instance_id], { row ->
+            count = row[0]
+        })
+
+        return count
+    }
+
+    def List<AcrossTrialsOntologyTerm> getAllXTrailsLeafNodes(AcrossTrialsOntologyTerm top){
+        List<AcrossTrialsOntologyTerm> nodes = new ArrayList<AcrossTrialsOntologyTerm>()
+
+        if (isLeafConceptKey(top)) {
+            nodes.add(top)
+            return nodes
+        }
+
+        top.children.each { child ->
+            nodes.addAll(getAllXTrailsLeafNodes(child))
+        }
+
+        return nodes
     }
 
     /**
