@@ -27,6 +27,9 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Statement
 
+import static org.transmartproject.db.ontology.AbstractAcrossTrialsOntologyTerm.ACROSS_TRIALS_TABLE_CODE
+import static org.transmartproject.db.ontology.AbstractAcrossTrialsOntologyTerm.ACROSS_TRIALS_TOP_TERM_NAME
+
 import static org.transmart.authorization.QueriesResourceAuthorizationDecorator.checkQueryResultAccess
 
 class I2b2HelperService {
@@ -298,14 +301,28 @@ class I2b2HelperService {
      */
     def getChildrenWithPatientCountsForConcept(String concept_key) {
         log.info "----------------------------------------------------------- getChildrenWithPatientCountsForConcept"
+        log.info "concept_key = " + concept_key
 
-        Sql sql = new Sql(dataSource);
+        def xTrailsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key) || (concept_key == xTrailsTopNode)
+
         def counts = [:];
-        log.trace("Trying to get counts for parent_concept_path=" + keyToPath(concept_key));
-        sql.eachRow("select * from CONCEPT_COUNTS where parent_concept_path = ?", [keyToPath(concept_key)], { row ->
-            log.trace "Found " << row.concept_path
-            counts.put(row.concept_path, row.patient_count)
-        });
+
+       if (xTrialsCaseFlag) {
+            log.info("XTrials for getConceptDistributionDataForConcept")
+            def node = conceptsResourceService.getByKey(concept_key)
+            def List<OntologyTerm> childNodes = node.children
+            for (OntologyTerm term: childNodes) {
+                counts.put(term.fullName,getObservationCountForXTrailsNode(term))
+            }
+        } else {
+            Sql sql = new Sql(dataSource);
+            log.info("Trying to get counts for parent_concept_path=" + keyToPath(concept_key));
+            sql.eachRow("select * from CONCEPT_COUNTS where parent_concept_path = ?", [keyToPath(concept_key)], { row ->
+                log.trace "Found " << row.concept_path
+                counts.put(row.concept_path, row.patient_count)
+            });
+        }
         return counts;
     }
 
@@ -751,6 +768,38 @@ class I2b2HelperService {
 
         int count = 0
         sql.eachRow(sqlt, [result_instance_id], { row ->
+            count = row[0]
+        })
+
+        return count
+    }
+
+    def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node) {
+        log.info "----------------------------------------------------------- start getObservationCountForXTrailsNode"
+
+        def modifierList = []
+        def leafNodes = getAllXTrailsLeafNodes(term_node)
+        leafNodes.each { node ->
+            modifierList.add(node.code)
+        }
+
+        Sql sql = new Sql(dataSource)
+
+        log.info "For case NOT using result_instance_id"
+        log.info "modifierList = " + modifierList
+
+        def sqlt = """
+            SELECT count(*) FROM (
+                SELECT distinct PATIENT_NUM
+                FROM OBSERVATION_FACT f
+                WHERE
+                    modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
+                    AND concept_cd != 'SECURITY'
+                ) as subjectList
+        """
+
+        int count = 0
+        sql.eachRow(sqlt, { row ->
             count = row[0]
         })
 
@@ -5356,8 +5405,29 @@ class I2b2HelperService {
      */
     def getChildrenWithAccessForUserNew(String concept_key, AuthUser user) {
         log.info "----------------------------------------------------------- getChildrenWithAccessForUserNew"
-        def children = getChildPathsWithTokensFromParentKey(concept_key);
-        return getAccess(children, user);
+
+        def xTrailsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key) || (concept_key == xTrailsTopNode)
+
+        def results = [:]
+
+        log.info "input concept_key = " + concept_key
+        log.info "user = " + user
+
+        if (xTrialsCaseFlag) {
+            log.info("XTrials for getChildrenWithAccessForUserNew")
+            log.warn("For cross trials, make no check at this time!!")
+
+            def node = conceptsResourceService.getByKey(concept_key)
+            def List<OntologyTerm> childNodes = node.children
+            for (OntologyTerm term: childNodes) {
+                results.put(term.fullName, 'view')
+            }
+        } else {
+            def children = getChildPathsWithTokensFromParentKey(concept_key);
+            results =  getAccess(children, user)
+        }
+        return results
     }
 
     /**
