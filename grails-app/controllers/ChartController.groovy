@@ -108,17 +108,18 @@ class ChartController {
         def paramMap = params;
 
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
-        log.trace("Called childConceptPatientCounts action in ChartController")
+        log.info("Called childConceptPatientCounts action in ChartController")
         log.trace("User is:" + user.username);
         log.trace(user.toString());
         def concept_key = params.concept_key;
-        log.trace("Requested counts for parent_concept_path=" + concept_key);
+        log.info("Requested counts for parent_concept_path=" + concept_key);
         def counts = i2b2HelperService.getChildrenWithPatientCountsForConcept(concept_key)
         def access = i2b2HelperService.getChildrenWithAccessForUserNew(concept_key, user)
         log.trace("access:" + (access as JSON));
         log.trace("counts = " + (counts as JSON))
 
         def obj = [counts: counts, accesslevels: access, test1: "works"]
+        log.info("returns: " + (obj as JSON))
         render obj as JSON
     }
 

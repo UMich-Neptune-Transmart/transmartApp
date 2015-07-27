@@ -297,6 +297,8 @@ class I2b2HelperService {
      * Gets the distinct patient counts for the children of a parent concept key
      */
     def getChildrenWithPatientCountsForConcept(String concept_key) {
+        log.info "----------------------------------------------------------- getChildrenWithPatientCountsForConcept"
+
         Sql sql = new Sql(dataSource);
         def counts = [:];
         log.trace("Trying to get counts for parent_concept_path=" + keyToPath(concept_key));
@@ -5353,6 +5355,7 @@ class I2b2HelperService {
      * Gets the children with access for a concept
      */
     def getChildrenWithAccessForUserNew(String concept_key, AuthUser user) {
+        log.info "----------------------------------------------------------- getChildrenWithAccessForUserNew"
         def children = getChildPathsWithTokensFromParentKey(concept_key);
         return getAccess(children, user);
     }
