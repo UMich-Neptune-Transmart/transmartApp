@@ -108,18 +108,18 @@ class ChartController {
         def paramMap = params;
 
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
-        log.info("Called childConceptPatientCounts action in ChartController")
+        log.trace("Called childConceptPatientCounts action in ChartController")
         log.trace("User is:" + user.username);
         log.trace(user.toString());
         def concept_key = params.concept_key;
-        log.info("Requested counts for parent_concept_path=" + concept_key);
+        log.trace("Requested counts for parent_concept_path=" + concept_key);
         def counts = i2b2HelperService.getChildrenWithPatientCountsForConcept(concept_key)
         def access = i2b2HelperService.getChildrenWithAccessForUserNew(concept_key, user)
         log.trace("access:" + (access as JSON));
         log.trace("counts = " + (counts as JSON))
 
         def obj = [counts: counts, accesslevels: access, test1: "works"]
-        log.info("returns: " + (obj as JSON))
+        log.trace("returns: " + (obj as JSON))
         render obj as JSON
     }
 
@@ -250,7 +250,7 @@ class ChartController {
      */
     def analysis = {
 
-        log.info "----------------------------------------------------------- analysis - starting "
+        log.debug "----------------------------------------------------------- analysis - starting "
 
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
@@ -260,7 +260,7 @@ class ChartController {
 
         String analysis_key = i2b2HelperService.getConceptKeyForAnalysis(concept_key);
 
-        log.info "i2b2HelperService.getConceptKeyForAnalysis(concept_key) returns " + analysis_key;
+        log.trace "i2b2HelperService.getConceptKeyForAnalysis(concept_key) returns " + analysis_key;
 
         PrintWriter pw = new PrintWriter(response.getOutputStream());
         pw.write("<html><head><link rel='stylesheet' type='text/css' href='${resource(dir: 'css', file: 'chartservlet.css')}'></head><body><div class='analysis'>");
@@ -277,17 +277,17 @@ class ChartController {
 
         //	log.debug("child concepts: "+cconcepts);
 
-        log.info "----------------------------------------------------------- analysis - continuing"
-        log.info("calling renderConceptAnalysisNew from analysis with analysis_key:" + analysis_key);
-        log.info("calling with result_instance_id1:" + result_instance_id1);
-        log.info("calling with result_instance_id2:" + result_instance_id2);
+        log.debug "----------------------------------------------------------- analysis - continuing"
+        log.trace("calling renderConceptAnalysisNew from analysis with analysis_key:" + analysis_key);
+        log.trace("calling with result_instance_id1:" + result_instance_id1);
+        log.trace("calling with result_instance_id2:" + result_instance_id2);
         renderConceptAnalysisNew(analysis_key, result_instance_id1, result_instance_id2, pw, request);
-        log.info "return from renderConceptAnalysisNew"
-        log.info "----------------------------------------------------------- analysis - continuing"
+        log.trace "return from renderConceptAnalysisNew"
+        log.debug "----------------------------------------------------------- analysis - continuing"
         pw.write("<hr>");
         if (!i2b2HelperService.isLeafConceptKey(analysis_key)) //must be a folder so render all the value children
         {
-            log.info("iterating through all items in folder")
+            log.trace("iterating through all items in folder")
 
             for (String c : i2b2HelperService.getChildValueConceptsFromParentKey(concept_key)) {
                 log.debug("-- rendering " + c)
@@ -300,7 +300,7 @@ class ChartController {
         }
         //renderPatientCountInfoTable(result_instance_id1, result_instance_id2, pw);
         pw.write("</div></body></html>");
-        log.info "----------------------------------------------------------- analysis - ending"
+        log.debug "----------------------------------------------------------- analysis - ending"
         pw.flush();
     }
 
@@ -612,7 +612,7 @@ class ChartController {
 
     def analysisGrid = {
 
-        log.info "----------------------------------------------------------- starting ChartController analysisGrid"
+        log.debug "----------------------------------------------------------- starting ChartController analysisGrid"
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
         def result_instance_id2 = params.result_instance_id2;
@@ -640,7 +640,7 @@ class ChartController {
 
             for (int i = 0; i < keys.size(); i++) {
 
-                log.info("adding concept data for " + keys.get(i));
+                log.trace("adding concept data for " + keys.get(i));
                 if (s1) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id1);
                 if (s2) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id2);
             }
@@ -671,13 +671,13 @@ class ChartController {
         pw.write(table.toJSONObject().toString(5));
         pw.flush();
 
-        log.info "----------------------------------------------------------- ending ChartController analysisGrid"
+        log.debug "----------------------------------------------------------- ending ChartController analysisGrid"
 
         request.getSession().setAttribute("gridtable", table);
     }
 
     def clearGrid = {
-        log.info("Clearing grid");
+        log.trace("Clearing grid");
         request.getSession().setAttribute("gridtable", null);
         log.debug("Setting export filename to null, since there is nothing to export")
         request.getSession().setAttribute("expdsfilename", null);
@@ -1031,22 +1031,22 @@ for (int i = 0; i < mapsize; i++)
     }
 
     private void renderConceptAnalysisNew(String concept_key, String result_instance_id1, String result_instance_id2, PrintWriter pw, HttpServletRequest request) {
-        log.info "----------------------------------------------------------- start ChartController renderConceptAnalysisNew"
+        log.debug "----------------------------------------------------------- start ChartController renderConceptAnalysisNew"
         log.debug("renderConceptAnalysisNew: rendering " + concept_key)
         try {
-            log.info("Rendering concept analysis for concept key: " + concept_key)
+            log.trace("Rendering concept analysis for concept key: " + concept_key)
             /*get variables*/
             String concept_cd = null;
             String concept_name = null;
             concept_cd = i2b2HelperService.getConceptCodeFromKey(concept_key);
             concept_name = i2b2HelperService.getShortNameFromKey(concept_key);
-            log.info("concept:" + concept_key + " - concept_cd " + concept_cd);
+            log.trace("concept:" + concept_key + " - concept_cd " + concept_cd);
 
             def leafNodeFlag = i2b2HelperService.isLeafConceptKey(concept_key)
             def valueLeafNodeFlag = leafNodeFlag && i2b2HelperService.isValueConceptKey(concept_key)
             def xTrialsFlag = i2b2HelperService.isXTrialsConcept(concept_key)
 
-            log.info("Flags: leafNodeFlag = " + leafNodeFlag + ", valueLeafNodeFlag = " + valueLeafNodeFlag + ", xTrialsFlag = " + xTrialsFlag)
+            log.trace("Flags: leafNodeFlag = " + leafNodeFlag + ", valueLeafNodeFlag = " + valueLeafNodeFlag + ", xTrialsFlag = " + xTrialsFlag)
 
             StringWriter sw1 = new StringWriter();
             StringWriter sw2 = new StringWriter();
@@ -1060,19 +1060,19 @@ for (int i = 0; i < mapsize; i++)
                 s2 = false;
             }
 
-            log.info "----------------------------------------------------------- render - before value test"
-            log.info "concept_cd = " + concept_cd
+            log.debug "----------------------------------------------------------- render - before value test"
+            log.debug "concept_cd = " + concept_cd
 
             if (valueLeafNodeFlag) {
 
                 Set<String> childConcepts = new HashSet<String>();
 
-                log.info "----------------------------------------------------------- for value Node"
+                log.trace "----------------------------------------------------------- for value Node"
 
                 ArrayList<Double> valuesAlist3 = new ArrayList<Double>();
                 ArrayList<Double> valuesAlist4 = new ArrayList<Double>();
 
-                log.info "----------------------------------------------------------- before data fetch"
+                log.trace "----------------------------------------------------------- before data fetch"
                 if (xTrialsFlag) {
                     // NOTE: as of this implementation there is no concept_cd value for xTrials data!
                     if (s1) valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1));
@@ -1081,7 +1081,7 @@ for (int i = 0; i < mapsize; i++)
                     /*get the data*/
                     String partentPath = i2b2HelperService.keyToPath(concept_key);
                     String parentConcept = i2b2HelperService.lookupParentConcept(partentPath);
-                    log.info("Get base concept: path = " + partentPath + ", concept = " + parentConcept)
+                    log.trace("Get base concept: path = " + partentPath + ", concept = " + parentConcept)
 
                     valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(concept_cd, result_instance_id1));
                     valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(concept_cd, result_instance_id2));
@@ -1092,7 +1092,7 @@ for (int i = 0; i < mapsize; i++)
                         childConcepts.addAll(i2b2HelperService.lookupChildConcepts(parentConcept, result_instance_id1, result_instance_id2));
                     }
 
-                    log.info("Iterating through child concepts");
+                    log.trace("Iterating through child concepts");
                     for (c in childConcepts) {
                         log.debug("\tc: " + c);
                         valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id1));
@@ -1101,11 +1101,11 @@ for (int i = 0; i < mapsize; i++)
                         log.trace("added to values4");
                     }
 
-                    log.info("\tA done iterating through child concepts");
+                    log.trace("\tA done iterating through child concepts");
                 }
-                log.info "----------------------------------------------------------- after data fetch"
-                log.info("valuesAlist3:" + valuesAlist3);
-                log.info("valuesAlist4:" + valuesAlist4);
+                log.trace "----------------------------------------------------------- after data fetch"
+                log.trace("valuesAlist3:" + valuesAlist3);
+                log.trace("valuesAlist4:" + valuesAlist4);
 
                 //double[] values3=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1);
                 //double[] values4=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2);
@@ -1121,7 +1121,7 @@ for (int i = 0; i < mapsize; i++)
                 if (s2) {
                     dataset3.addSeries("Subset 2", values4, 10, StatHelper.min(values4), StatHelper.max(values4));
                 }
-                log.info "----------------------------------------------------------- render histogram"
+                log.trace "----------------------------------------------------------- render histogram"
                 JFreeChart chart3 = ChartFactory.createHistogram(
                         "Histogram of " + concept_name,
                         null,
@@ -1173,7 +1173,7 @@ for (int i = 0; i < mapsize; i++)
 
                 log.debug("B getting data distribution for child concepts by trial");
 
-                log.info "----------------------------------------------------------- data by trial"
+                log.debug "----------------------------------------------------------- data by trial"
 
                 if (xTrialsFlag) {
                     // NOTE: as of this implementation there are no concept_cd values for xTrials data!
@@ -1184,11 +1184,11 @@ for (int i = 0; i < mapsize; i++)
                     results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id2);
                 }
 
-                log.info("s1: " + s1 + ", s2: " + s2 + ", results1: " + results1 + ", results2: " + results2)
-                log.info("class of results1: " + results1.getClass() + ", class of results2:" + results2.getClass());
+                log.trace("s1: " + s1 + ", s2: " + s2 + ", results1: " + results1 + ", results2: " + results2)
+                log.trace("class of results1: " + results1.getClass() + ", class of results2:" + results2.getClass());
 
                 log.trace(results1 as JSON)
-                log.info "----------------------------------------------------------- render BoxAndWisker for data by trial"
+                log.debug "----------------------------------------------------------- render BoxAndWisker for data by trial"
                 def width = 200;
                 def offset = 40;
                 DefaultBoxAndWhiskerCategoryDataset dataset = new DefaultBoxAndWhiskerCategoryDataset();
@@ -1259,7 +1259,7 @@ for (int i = 0; i < mapsize; i++)
                 String filename = ServletUtilities.saveChartAsJPEG(chart, width, 300, info, request.getSession());
                 String graphURL = request.getContextPath() + "/chart/displayChart?filename=" + filename;
 
-                log.info "----------------------------------------------------------- render table for results"
+                log.debug "----------------------------------------------------------- render table for results"
 
                 pw.write("<table>");
                 pw.write("<tr><td align='center' colspan='5'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
@@ -1315,17 +1315,16 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("</td></tr></td></tr></table></td></tr></table>")
 
             } else {
-                log.info("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-                log.info("Wasn't a value concept, doing a non-value concept analysis:")
+                log.debug "----------------------------------------------------------- non-value concept renderConceptAnalysisNew"
                 HashMap<String, Integer> results1;
                 HashMap<String, Integer> results2;
                 if (s1) {
                     results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1);
-                    log.info("concept_key:" + concept_key + ", results1: " + results1);
+                    log.trace("concept_key:" + concept_key + ", results1: " + results1);
                 }
                 if (s2) {
                     results2 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id2);
-                    log.info("concept_key:" + concept_key + ", results2: " + results2);
+                    log.trace("concept_key:" + concept_key + ", results2: " + results2);
                 }
                 int height = 80 + 15 * results1.size();
                 /*printHashMap(results1, pw);*/
@@ -1364,12 +1363,12 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("<td><tr><p></table>")
 
             }
-            log.info("renderConceptAnalysisNew: finished rendering " + concept_key)
+            log.trace("renderConceptAnalysisNew: finished rendering " + concept_key)
         }
         catch (Exception e) {
             log.error(e); e.printStackTrace();
         }
-        log.info "----------------------------------------------------------- done renderConceptAnalysisNew"
+        log.debug "----------------------------------------------------------- done renderConceptAnalysisNew"
     }
 
     private void renderBoxAndWhiskerInfoTableNew(List<Number> values, String trial, StringWriter pw) {
