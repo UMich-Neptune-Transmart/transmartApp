@@ -2,6 +2,7 @@ package transmartapp
 
 import grails.converters.JSON
 import org.transmart.searchapp.AuthUser
+import org.transmartproject.db.ontology.AcrossTrialsOntologyTerm
 
 class OntologyService {
 
@@ -19,6 +20,7 @@ class OntologyService {
             searchterms = null;
         }
         log.trace("searching for:" + searchtags + " of type" + tagsearchtype + "with searchterms:" + searchterms?.join(","))
+        log.info("searching for:" + searchtags + " of type" + tagsearchtype + "with searchterms:" + searchterms?.join(","))
         def myCount = 0;
         def allSystemCds = []
         def visualAttrHiddenWild = '%H%';
@@ -39,6 +41,8 @@ class OntologyService {
             searchtermstring = "2=1"; //No free-text search terms, so this section of the query is always false
         }
 
+        log.info searchtermstring
+
         def accessionSearchString = ""
         if (accessionsToInclude) {
             accessionSearchString += " OR (o.hlevel <= 1 AND o.sourcesystemcd IN ("
@@ -54,9 +58,37 @@ class OntologyService {
             nodeQuery = nodeQuery.replace("_searchterms_", searchtermstring).replace("_accessionSearch_", accessionSearchString)
 
             log.debug(nodeQuery)
+            log.info("nodeQuery = " + nodeQuery)
 
             myCount = i2b2.OntNode.executeQuery(countQuery)[0]
             myNodes = i2b2.OntNode.executeQuery(nodeQuery, [max: 100])
+
+            // for XTrails
+
+            def countXTrailsQuery = """
+                SELECT COUNT(DISTINCT mdv.path) from org.transmartproject.db.ontology.ModifierDimensionView mdv
+                WHERE (_searchterms_) AND mdv.nodeType = 'L' """
+
+            def nodeXTrialsQuery = """
+                SELECT mdv from org.transmartproject.db.ontology.ModifierDimensionView mdv
+                WHERE (_searchterms_) AND mdv.nodeType = 'L' """
+
+            def searchXTrailsTermstring = searchtermstring.replaceAll("o.level","mdv.level").
+                    replaceAll("o.sourcesystemcd","mdv.path").
+                    replaceAll("o.name","mdv.name")
+
+            countXTrailsQuery = countXTrailsQuery.replace("_searchterms_", searchXTrailsTermstring)
+            nodeXTrialsQuery = nodeXTrialsQuery.replace("_searchterms_", searchXTrailsTermstring)
+
+            log.info("nodeXTrialsQuery = " + nodeXTrialsQuery)
+
+            myCount += org.transmartproject.db.ontology.ModifierDimensionView.executeQuery(countXTrailsQuery)[0]
+            def mdvList = org.transmartproject.db.ontology.ModifierDimensionView.executeQuery(nodeXTrialsQuery, [max: 100])
+            mdvList.each({mvdItem ->
+                def node = new AcrossTrialsOntologyTerm()
+                node.modifierDimension = mvdItem
+                myNodes.add(node)
+            })
 
         } else {
 
@@ -76,23 +108,35 @@ class OntologyService {
         //check the security
         def keys = [:]
         myNodes.each { node ->
-            //keys.add("\\"+node.id.substring(0,node.id.indexOf("\\",2))+node.id)
-            keys.put(node.id, node.securitytoken)
-            log.trace(node.id + " security token:" + node.securitytoken)
+            log.info("Security for node - class = " + node.class.name)
+            def token, id
+            if (node instanceof i2b2.OntNode) {
+                id = node.id
+                token = node.securitytoken
+            } else {
+                log.warn("Skipping security check for XTrails nodes: " + node.name)
+                id = node.fullName
+                token = "EXP:PUBLIC"
+            }
+            keys.put(id,token)
+            log.info(id + " security token: " + token)
+            log.trace(id + " security token: " + token)
         }
+        log.info("keys = " + keys)
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         def access = i2b2HelperService.getAccess(keys, user);
-        log.trace(access as JSON)
+        log.info("access = " + access)
 
         if (returnType.equals("JSON")) {
             //build the JSON for the client
             myNodes.each { node ->
-                log.trace(node.id)
+                def id = (node instanceof i2b2.OntNode)?node.id:node.conceptKey.toString()
+                log.info("each node; id = " + id)
                 def level = node.hlevel
-                def key = "\\" + node.id.substring(0, node.id.indexOf("\\", 2)) + node.id
+                def key = "\\" + id.substring(0, id.indexOf("\\", 2)) + id
                 def name = node.name
-                def synonym_cd = node.synonymcd
-                def visualattributes = node.visualattributes
+                def synonym_cd = (node instanceof i2b2.OntNode)?node.synonymcd:""
+                def visualattributes = (node instanceof i2b2.OntNode)?node.visualattributes:node.modifierDimension.nodeType
                 def totalnum = node.totalnum
                 def facttablecolumn = node.facttablecolumn
                 def tablename = node.tablename
@@ -115,6 +159,7 @@ class OntologyService {
 
             def result = [concepts: concepts, resulttext: resulttext]
             log.trace(result as JSON)
+            log.info("results = " + results)
 
             return result
         } else if (returnType.equals("accession")) {
@@ -129,11 +174,14 @@ class OntologyService {
             def ids = []
 
             myNodes.each { node ->
-                def key = "\\" + node.id.substring(0, node.id.indexOf("\\", 2)) + node.id // ?!
+                def id = (node instanceof i2b2.OntNode)?node.id:node.conceptKey.toString()
+                log.info("myNodes.each id = " + id)
+                def key = "\\" + id.substring(0, id.indexOf("\\", 2)) + id // ?!
                 if (!ids.contains(key)) {
                     ids.add(key)
                 }
             }
+            log.info("returning path ids: " + ids)
             return ids
         }
     }
