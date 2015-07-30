@@ -20,7 +20,6 @@ class OntologyService {
             searchterms = null;
         }
         log.trace("searching for:" + searchtags + " of type" + tagsearchtype + "with searchterms:" + searchterms?.join(","))
-        log.info("searching for:" + searchtags + " of type" + tagsearchtype + "with searchterms:" + searchterms?.join(","))
         def myCount = 0;
         def allSystemCds = []
         def visualAttrHiddenWild = '%H%';
@@ -41,8 +40,6 @@ class OntologyService {
             searchtermstring = "2=1"; //No free-text search terms, so this section of the query is always false
         }
 
-        log.info searchtermstring
-
         def accessionSearchString = ""
         if (accessionsToInclude) {
             accessionSearchString += " OR (o.hlevel <= 1 AND o.sourcesystemcd IN ("
@@ -57,8 +54,7 @@ class OntologyService {
             countQuery = countQuery.replace("_searchterms_", searchtermstring).replace("_accessionSearch_", accessionSearchString)
             nodeQuery = nodeQuery.replace("_searchterms_", searchtermstring).replace("_accessionSearch_", accessionSearchString)
 
-            log.debug(nodeQuery)
-            log.info("nodeQuery = " + nodeQuery)
+            log.debug("nodeQuery = " + nodeQuery)
 
             myCount = i2b2.OntNode.executeQuery(countQuery)[0]
             myNodes = i2b2.OntNode.executeQuery(nodeQuery, [max: 100])
@@ -80,7 +76,7 @@ class OntologyService {
             countXTrailsQuery = countXTrailsQuery.replace("_searchterms_", searchXTrailsTermstring)
             nodeXTrialsQuery = nodeXTrialsQuery.replace("_searchterms_", searchXTrailsTermstring)
 
-            log.info("nodeXTrialsQuery = " + nodeXTrialsQuery)
+            log.debug("nodeXTrialsQuery = " + nodeXTrialsQuery)
 
             myCount += org.transmartproject.db.ontology.ModifierDimensionView.executeQuery(countXTrailsQuery)[0]
             def mdvList = org.transmartproject.db.ontology.ModifierDimensionView.executeQuery(nodeXTrialsQuery, [max: 100])
@@ -106,32 +102,31 @@ class OntologyService {
         //}
 
         //check the security
+        def boolean oneWarningIsEnough = true
         def keys = [:]
         myNodes.each { node ->
-            log.info("Security for node - class = " + node.class.name)
             def token, id
             if (node instanceof i2b2.OntNode) {
                 id = node.id
                 token = node.securitytoken
             } else {
-                log.warn("Skipping security check for XTrails nodes: " + node.name)
+                if (oneWarningIsEnough) {
+                    log.warn("Skipping security check for XTrails nodes: " + node.name)
+                    oneWarningIsEnough = false
+                }
                 id = node.fullName
                 token = "EXP:PUBLIC"
             }
             keys.put(id,token)
-            log.info(id + " security token: " + token)
             log.trace(id + " security token: " + token)
         }
-        log.info("keys = " + keys)
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         def access = i2b2HelperService.getAccess(keys, user);
-        log.info("access = " + access)
 
         if (returnType.equals("JSON")) {
             //build the JSON for the client
             myNodes.each { node ->
                 def id = (node instanceof i2b2.OntNode)?node.id:node.conceptKey.toString()
-                log.info("each node; id = " + id)
                 def level = node.hlevel
                 def key = "\\" + id.substring(0, id.indexOf("\\", 2)) + id
                 def name = node.name
@@ -159,7 +154,6 @@ class OntologyService {
 
             def result = [concepts: concepts, resulttext: resulttext]
             log.trace(result as JSON)
-            log.info("results = " + results)
 
             return result
         } else if (returnType.equals("accession")) {
@@ -175,13 +169,12 @@ class OntologyService {
 
             myNodes.each { node ->
                 def id = (node instanceof i2b2.OntNode)?node.id:node.conceptKey.toString()
-                log.info("myNodes.each id = " + id)
                 def key = "\\" + id.substring(0, id.indexOf("\\", 2)) + id // ?!
                 if (!ids.contains(key)) {
                     ids.add(key)
                 }
             }
-            log.info("returning path ids: " + ids)
+            log.debug("returning path ids: " + ids)
             return ids
         }
     }
