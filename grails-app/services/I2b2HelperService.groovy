@@ -1148,13 +1148,22 @@ class I2b2HelperService {
         log.trace "concept_key = " + concept_key
         log.trace "is Leaf Concept key: " + isLeafConceptKey(concept_key)
 
-        String columnid = concept_key.encodeAsSHA1()
-        String columnname = getColumnNameFromKey(concept_key).replace(" ", "_")
-
         def xTrialsCaseFlag = isXTrialsConcept(concept_key)
 
         log.trace "is XTrials case = " + xTrialsCaseFlag
 
+
+        /* As the column headers only show the (in many cases ambiguous) leaf part of the concept path,
+         * showing the full concept path in the tooltip is much more informative.
+         * As no tooltip text is passed on to the GridView code, the value of the string columnid is used
+         * and shown as the tooltip text when hoovering over the column header in GridView.
+         * Explicitly passing a tooltip text to the GridView code removes the necessity to use this columnid value.
+         * Removal of some undesired non-alpha-numeric characters from tooltip string
+         * prevents display errors in GridView (drop down menu, columns not showing or cells not being filled).
+         */
+        String columnid = concept_key.encodeAsSHA1()
+        String columnname = getColumnNameFromKey(concept_key).replace(" ", "_")
+        String columntooltip = keyToPath(concept_key).replace(" ", "_").replace(".","_").replace("[","_")
         if (isLeafConceptKey(concept_key)) {
             log.trace "----------------- this is a Leaf Node"
 
@@ -1170,7 +1179,10 @@ class I2b2HelperService {
             }
             else {
                 insertConceptDataIntoTable(columnid, concept_key, result_instance_id, valueLeafNodeFlag, tablein)
+            }
 
+            if (tablein.getColumn(columnid) == null) {
+                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "number", columntooltip));
             }
 
             if (isValueConceptKey(concept_key)) {
@@ -1275,7 +1287,7 @@ class I2b2HelperService {
                 tablein.putColumn("subject", new ExportColumn("subject", "Subject", "", "string"));
             }
             if (tablein.getColumn(columnid) == null) {
-                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "string"));
+                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "string", columntooltip));
             }
 
             // Store the concept paths to query

@@ -18,7 +18,7 @@ public class ExportColumn {
     private String pattern;
     private String type;
     private String tooltip;
-    private Integer width;
+
 
     public ExportColumn(String id, String label, String pattern, String type) {
         this.id = id;
@@ -26,16 +26,15 @@ public class ExportColumn {
         this.pattern = pattern;
         this.type = type;
         this.tooltip = label;
-        this.width = -1;
     }
 
-    public ExportColumn(String id, String label, String pattern, String type, Integer width) {
+
+    public ExportColumn(String id, String label, String pattern, String type, String tooltip) {
         this.id = id;
         this.label = label;
         this.pattern = pattern;
         this.type = type;
         this.tooltip = tooltip;
-        this.width = width;
     }
 
     public JSONObject toJSONObject() throws JSONException {
@@ -110,11 +109,11 @@ public class ExportColumn {
         this.type = type;
     }
 
-    public Integer getWidth() {
-        return width;
+    public String getTooltip() {
+        return tooltip;
     }
 
-    public void setWidth(Integer height) {
-        this.width = width;
+    public void setTooltip(String tooltip) {
+        this.tooltip = tooltip;
     }
 }
