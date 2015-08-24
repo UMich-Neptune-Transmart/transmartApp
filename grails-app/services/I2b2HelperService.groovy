@@ -747,12 +747,14 @@ class I2b2HelperService {
 
         def sqlt = """
             SELECT count(*) FROM (
-                SELECT distinct PATIENT_NUM
-                FROM OBSERVATION_FACT f
+                SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                FROM 
+                    observation_fact f
+                    JOIN patient_dimension pd ON f.patient_num=pd.patient_num
                 WHERE
                     modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
                     AND concept_cd != 'SECURITY'
-                    AND PATIENT_NUM IN (select distinct patient_num
+                    AND f.patient_num IN (select distinct patient_num
                         from qt_patient_set_collection
                         where result_instance_id = ?)
                 ) as subjectList
@@ -767,7 +769,7 @@ class I2b2HelperService {
     }
 
     def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node) {
-        log.debug "----------------------------------------------------------- start getObservationCountForXTrailsNode"
+        log.info "----------------------------------------------------------- start getObservationCountForXTrailsNode"
 
         def modifierList = []
         def leafNodes = getAllXTrailsLeafNodes(term_node)
@@ -782,14 +784,19 @@ class I2b2HelperService {
 
         def sqlt = """
             SELECT count(*) FROM (
-                SELECT distinct PATIENT_NUM
-                FROM OBSERVATION_FACT f
+                SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                FROM 
+                    observation_fact f
+                    JOIN patient_dimension pd ON f.patient_num=pd.patient_num
                 WHERE
-                    modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
-                    AND concept_cd != 'SECURITY'
+                    f.modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
+                    AND f.concept_cd != 'SECURITY'
                 ) as subjectList
         """
 
+		log.info "sql text ="
+		log.info sqlt
+		
         int count = 0
         sql.eachRow(sqlt, { row ->
             count = row[0]
@@ -1027,7 +1034,10 @@ class I2b2HelperService {
             // All children should be leaf categorical values
             if (item.children.any {
                 log.info "----------------------------------------------------------- it's child class"
-                log.info item.class.name
+                log.info it.class.name
+				if (xTrialsCaseFlag) {
+					return !isLeafConceptKey(it)
+				}
                 return !isLeafConceptKey(it) || nodeXmlRepresentsValueConcept(it.metadataxml)
             }) {
                 log.debug("Can not show data in gridview for folder nodes with mixed type of children")
@@ -5196,7 +5206,7 @@ class I2b2HelperService {
      * for display in a distribution histogram for a given subset
      */
     def getConceptDistributionDataForValueConceptByTrial(String concept_key, String result_instance_id) {
-        log.debug "----------------------------------------------------------- getConceptDistributionDataForValueConceptByTrial"
+        log.info "----------------------------------------------------------- getConceptDistributionDataForValueConceptByTrial"
 
         checkQueryResultAccess result_instance_id
         log.trace "access assured"
@@ -5207,7 +5217,7 @@ class I2b2HelperService {
         def trialdata = [:];
 
         if (result_instance_id != null && result_instance_id != "") {
-            log.trace("Getting concept distribution data for value concept:" + concept_key);
+            log.info("Getting concept distribution data for value concept:" + concept_key);
             log.trace "concept_key = " + concept_key
             log.trace "result_instance_id = " + result_instance_id
 
@@ -5218,8 +5228,8 @@ class I2b2HelperService {
                 def itemProbe = conceptsResourceService.getByKey(concept_key)
                 String modifier_cd = itemProbe.modifierDimension.code
 
-                log.trace "modifier_cd = " + modifier_cd
-                log.trace "result_instance_id = " + result_instance_id
+                log.info "modifier_cd = " + modifier_cd
+                log.info "result_instance_id = " + result_instance_id
 
                 String sqlt = """
                     SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f
