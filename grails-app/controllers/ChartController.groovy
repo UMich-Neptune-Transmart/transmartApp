@@ -308,7 +308,7 @@ class ChartController {
      * Action to get the basic statistics for the subset comparison and render them
      */
     def basicStatistics = {
-        log.trace("*******************Called basicStatistics action in ChartController")
+        log.info("*******************Called basicStatistics action in ChartController")
         request.getSession().setAttribute("gridtable", null);
         log.trace("Clearing grid in basicstatistics")
         def result_instance_id1 = params.result_instance_id1;

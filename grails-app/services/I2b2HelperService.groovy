@@ -55,23 +55,41 @@ class I2b2HelperService {
     def double[] getPatientDemographicValueDataForSubset(String col, String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        ArrayList<Double> values = new ArrayList<Double>();
+        // NOTE: UGLY, UGLY CODE -  The sourcesystem_cd filed, in the case that across trials data
+        // exists, will be TrialId:SubjectId, where SubjectId is a unique subject id across trials.
+        ArrayList<Double> values = new ArrayList<Double>()
+        Set<String> idSet = new HashSet<String>()
         Sql sql = new Sql(dataSource)
-        String sqlt = """SELECT """ + col + """ FROM patient_dimension f WHERE
-		    PATIENT_NUM IN (select distinct patient_num
-			from qt_patient_set_collection
-			where result_instance_id = ?)""";
+        String sqlt = """SELECT """ + col + """, sourcesystem_cd, patient_num
+            FROM patient_dimension f
+            WHERE patient_num IN (
+                select distinct patient_num
+			        from qt_patient_set_collection
+			        where result_instance_id = ?)""";
         sql.eachRow(sqlt, [result_instance_id], { row ->
-            values.add(row[0])
+//            log.info("row: " + row[0] + "," + row[1] + "," + row[2])
+            def id = row[2];
+            if (row[1]) {
+                def holder = []
+                holder = row[1].toString().split(":");
+                if ((holder != null) && (holder.size() == 2) && (holder[1] != null)) {
+                    id = holder[1];
+                }
+            }
+//            log.info ("id = " + id)
+            if (!idSet.contains(id)) {
+                idSet.add(id)
+                values.add(row[0])
+            }
         });
-        double[] returnvalues = new double[values.size()];
+        double[] returnvalues = new double[values.size()]
         for (int i = 0; i < values.size(); i++) {
-            returnvalues[i] = values.get(i);
+            returnvalues[i] = values.get(i)
         }
         return returnvalues;
     }
 
-    /**
+        /**
      * Converts a concept key to a path
      */
     def keyToPath(String concept_key) {
