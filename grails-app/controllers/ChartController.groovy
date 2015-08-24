@@ -1060,14 +1060,14 @@ for (int i = 0; i < mapsize; i++)
                 s2 = false;
             }
 
-            log.debug "----------------------------------------------------------- render - before value test"
+            log.info "----------------------------------------------------------- render - before value test"
             log.debug "concept_cd = " + concept_cd
 
             if (valueLeafNodeFlag) {
 
                 Set<String> childConcepts = new HashSet<String>();
 
-                log.trace "----------------------------------------------------------- for value Node"
+                log.info "----------------------------------------------------------- for value Node"
 
                 ArrayList<Double> valuesAlist3 = new ArrayList<Double>();
                 ArrayList<Double> valuesAlist4 = new ArrayList<Double>();
@@ -1103,9 +1103,9 @@ for (int i = 0; i < mapsize; i++)
 
                     log.trace("\tA done iterating through child concepts");
                 }
-                log.trace "----------------------------------------------------------- after data fetch"
-                log.trace("valuesAlist3:" + valuesAlist3);
-                log.trace("valuesAlist4:" + valuesAlist4);
+                log.info "----------------------------------------------------------- after data fetch"
+                log.info("valuesAlist3:" + valuesAlist3);
+                log.info("valuesAlist4:" + valuesAlist4);
 
                 //double[] values3=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1);
                 //double[] values4=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2);
@@ -1121,7 +1121,7 @@ for (int i = 0; i < mapsize; i++)
                 if (s2) {
                     dataset3.addSeries("Subset 2", values4, 10, StatHelper.min(values4), StatHelper.max(values4));
                 }
-                log.trace "----------------------------------------------------------- render histogram"
+                log.trace "---------------------------------------------------------- render histogram"
                 JFreeChart chart3 = ChartFactory.createHistogram(
                         "Histogram of " + concept_name,
                         null,
@@ -1173,7 +1173,7 @@ for (int i = 0; i < mapsize; i++)
 
                 log.debug("B getting data distribution for child concepts by trial");
 
-                log.debug "----------------------------------------------------------- data by trial"
+                log.info "----------------------------------------------------------- data by trial"
 
                 if (xTrialsFlag) {
                     // NOTE: as of this implementation there are no concept_cd values for xTrials data!
@@ -1188,7 +1188,7 @@ for (int i = 0; i < mapsize; i++)
                 log.trace("class of results1: " + results1.getClass() + ", class of results2:" + results2.getClass());
 
                 log.trace(results1 as JSON)
-                log.debug "----------------------------------------------------------- render BoxAndWisker for data by trial"
+                log.info "----------------------------------------------------------- render BoxAndWisker for data by trial"
                 def width = 200;
                 def offset = 40;
                 DefaultBoxAndWhiskerCategoryDataset dataset = new DefaultBoxAndWhiskerCategoryDataset();
@@ -1259,7 +1259,7 @@ for (int i = 0; i < mapsize; i++)
                 String filename = ServletUtilities.saveChartAsJPEG(chart, width, 300, info, request.getSession());
                 String graphURL = request.getContextPath() + "/chart/displayChart?filename=" + filename;
 
-                log.debug "----------------------------------------------------------- render table for results"
+                log.info "----------------------------------------------------------- render table for results"
 
                 pw.write("<table>");
                 pw.write("<tr><td align='center' colspan='5'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
@@ -1315,7 +1315,7 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("</td></tr></td></tr></table></td></tr></table>")
 
             } else {
-                log.debug "----------------------------------------------------------- non-value concept renderConceptAnalysisNew"
+                log.info "----------------------------------------------------------- non-value concept renderConceptAnalysisNew"
                 HashMap<String, Integer> results1;
                 HashMap<String, Integer> results2;
                 if (s1) {

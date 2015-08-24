@@ -292,7 +292,7 @@ class I2b2HelperService {
      * Gets the distinct patient counts for the children of a parent concept key
      */
     def getChildrenWithPatientCountsForConcept(String concept_key) {
-        log.debug "----------------------------------------------------------- getChildrenWithPatientCountsForConcept"
+        log.info "----------------------------------------------------------- getChildrenWithPatientCountsForConcept"
         log.debug "concept_key = " + concept_key
 
         def xTrailsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
@@ -1016,9 +1016,9 @@ class I2b2HelperService {
             // Check whether the folder is valid: first find all children of the current code
             def item = conceptsResourceService.getByKey(concept_key)
 
-            log.debug "----------------------------------------------------------- this is Folder Node"
-            log.trace "concept_key = " + concept_key
-            log.trace item.class.name
+            log.info "----------------------------------------------------------- this is Folder Node"
+            log.info "concept_key = " + concept_key
+            log.info item.class.name
 
             if (!item.children) {
                 log.debug("Can not show data in gridview for empty node: " + concept_key)
@@ -1026,15 +1026,15 @@ class I2b2HelperService {
 
             // All children should be leaf categorical values
             if (item.children.any {
-                log.trace "----------------------------------------------------------- it's child class"
-                log.trace item.class.name
+                log.info "----------------------------------------------------------- it's child class"
+                log.info item.class.name
                 return !isLeafConceptKey(it) || nodeXmlRepresentsValueConcept(it.metadataxml)
             }) {
                 log.debug("Can not show data in gridview for folder nodes with mixed type of children")
                 return tablein
             }
 
-            log.trace "----------------------------------------------------------- all folder child nodes are categorical leaf nodes"
+            log.info "----------------------------------------------------------- all folder child nodes are categorical leaf nodes"
 
             /*add the column to the table if its not there*/
             if (tablein.getColumn("subject") == null) {
