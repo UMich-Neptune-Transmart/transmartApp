@@ -451,14 +451,21 @@ class I2b2HelperService {
     def Integer getPatientSetSize(String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        log.trace("Getting patient set size with id:" + result_instance_id);
+        log.info("Getting patient set size with id:" + result_instance_id);
         Integer i = 0;
         Sql sql = new Sql(dataSource);
-        String sqlt = """select count(distinct(patient_num)) as patcount 
-						 FROM qt_patient_set_collection
-						 WHERE result_instance_id = CAST(? AS numeric)""";
-
-        log.trace(sqlt);
+        String sqlt = """select count(*) as patcount
+            FROM (
+                SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                FROM qt_patient_set_collection ps
+                    JOIN patient_dimension pd
+                    ON ps.patient_num=pd.patient_num
+                WHERE ps.result_instance_id = CAST(? AS numeric)
+            ) pateint_set"""
+//        String sqlt = """select count(distinct(patient_num)) as patcount
+//						 FROM qt_patient_set_collection
+//						 WHERE result_instance_id = CAST(? AS numeric)""";
+        log.info(sqlt);
         sql.eachRow(sqlt, [result_instance_id], { row ->
             log.trace("inrow");
             i = row.patcount;
@@ -473,13 +480,39 @@ class I2b2HelperService {
     def int getPatientSetIntersectionSize(String result_instance_id1, String result_instance_id2) {
         checkQueryResultAccess result_instance_id1, result_instance_id2
 
-        log.trace("Getting patient set intersection");
+        log.trace("Getting patient set intersection - result_instance_id1 = "
+                + result_instance_id1 + ", result_instance_id2 = " + result_instance_id2);
         Integer i = 0;
         Sql sql = new Sql(dataSource);
-        String sqlt = """Select count(*) as patcount FROM ((select distinct patient_num from qt_patient_set_collection
-		        where result_instance_id = ?) a inner join (select distinct patient_num from qt_patient_set_collection
-		        where result_instance_id = ?) b ON a.patient_num=b.patient_num)""";
-        log.trace(sqlt);
+
+        String sqlt = """Select count(*) as patcount
+        FROM (
+                SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                from
+                qt_patient_set_collection a
+                inner join qt_patient_set_collection b
+                on a.patient_num=b.patient_num and a.result_instance_id = CAST(? AS numeric)
+                join patient_dimension pd
+                on b.patient_num=pd.patient_num and b.result_instance_id = CAST(? AS numeric)
+        ) qt_patient_set"""
+
+//        String sqlt = """Select count(*) as patcount
+//            FROM (
+//                SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+//                from
+//                     ((select distinct patient_num
+//                     from qt_patient_set_collection
+//	    	            where result_instance_id = CAST(? AS numeric)) a
+//                        inner join
+//                        (select distinct patient_num
+//                            from qt_patient_set_collection
+//		                    where result_instance_id = CAST(? AS numeric)) b
+//                        ON a.patient_num=b.patient_num) qt_patient_set
+//                    JOIN patient_dimension pd
+//                    ON qt_patient_set.patient_num=pd.patient_num
+//		            """;
+
+        log.info(sqlt);
         sql.eachRow(sqlt, [
                 result_instance_id1,
                 result_instance_id2
@@ -749,7 +782,8 @@ class I2b2HelperService {
     }
 
     def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node, String result_instance_id) {
-        log.debug "----------------------------------------------------------- start getObservationCountForXTrailsNode"
+        log.info "--------  start getObservationCountForXTrailsNode"
+        log.info "---------- case: term_nade and result_instance_id"
         checkQueryResultAccess result_instance_id
 
         def modifierList = []
@@ -783,11 +817,13 @@ class I2b2HelperService {
             count = row[0]
         })
 
+        log.info "count = " + count
         return count
     }
 
     def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node) {
-        log.info "----------------------------------------------------------- start getObservationCountForXTrailsNode"
+        log.info "-------- start getObservationCountForXTrailsNode"
+        log.info "--------------------------- case: term_nade only"
 
         def modifierList = []
         def leafNodes = getAllXTrailsLeafNodes(term_node)
@@ -820,6 +856,7 @@ class I2b2HelperService {
             count = row[0]
         })
 
+        log.info "count = " + count
         return count
     }
 

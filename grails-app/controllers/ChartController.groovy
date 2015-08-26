@@ -119,7 +119,7 @@ class ChartController {
         log.trace("counts = " + (counts as JSON))
 
         def obj = [counts: counts, accesslevels: access, test1: "works"]
-        log.info("returns: " + (obj as JSON))
+        // log.info("returns: " + (obj as JSON))
         render obj as JSON
     }
 
@@ -332,6 +332,9 @@ class ChartController {
         log.trace("s2:" + s2)
         PrintWriter pw = new PrintWriter(response.getOutputStream());
 
+        log.info ("----------  start of basic chart ----------")
+        log.info ("----------  top level summary    ----------")
+
         pw.write("<html><head><link rel='stylesheet' type='text/css' href='${resource(dir: 'css', file: 'chartservlet.css')}'></head><body><div class='analysis'>");
         pw.write("<table width='100%'>");
         pw.write("<tr><td colspan='2' align='center'><div class='analysistitle' id='analysis_title'>Summary " +
@@ -347,6 +350,8 @@ class ChartController {
         pw.write("</tr>");
         pw.write("<tr><td colspan='2' align='center'>");
         renderPatientCountInfoTable(result_instance_id1, result_instance_id2, pw);
+
+        log.info ("----------  age data section     ----------")
 
         /*get the data*/
         log.trace("Getting age data")
@@ -457,6 +462,8 @@ class ChartController {
         pw.write("</td></tr></table>");
         pw.write("</td></tr><tr><td width='50%' align='center'>");
 
+        log.info ("----------  gender data section  ----------")
+
         if (s1) {
             HashMap<String, Integer> sexs1 = i2b2HelperService.getPatientDemographicDataForSubset("sex_cd", result_instance_id1);
             JFreeChart chart = createConceptAnalysisPieChart(hashMapToPieDataset(sexs1, "Sex"), "Sex");
@@ -482,6 +489,7 @@ class ChartController {
             renderCategoryResultsHashMap(sexs2, "Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2), pw);
         }
 
+        log.info ("----------  race data section    ----------")
 
         HashMap<String, Integer> raceResults1;
         HashMap<String, Integer> raceResults2;
