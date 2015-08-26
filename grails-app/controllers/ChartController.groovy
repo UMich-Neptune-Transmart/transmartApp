@@ -570,6 +570,8 @@ class ChartController {
 
         pw.write("</td></tr></table>");
 
+        log.info ("----------  for unique concepts  ----------")
+
         /*get all distinct  concepts for analysis from both subsets into hashmap*/
         List<String> keys = i2b2HelperService.getConceptKeysInSubsets(result_instance_id1, result_instance_id2);
         pw.write("<hr>");
@@ -614,6 +616,10 @@ class ChartController {
         pw.write(table.toJSONObject().toString(5));
         pw.write("</pre>");*/
         /*end test*/
+
+        log.info ("----------  end basic chart      ----------")
+
+
         pw.write("</div></body></html>");
         pw.flush();
     }

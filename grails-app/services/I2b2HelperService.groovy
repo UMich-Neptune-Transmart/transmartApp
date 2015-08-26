@@ -55,7 +55,7 @@ class I2b2HelperService {
     def double[] getPatientDemographicValueDataForSubset(String col, String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        // NOTE: UGLY, UGLY CODE -  The sourcesystem_cd filed, in the case that across trials data
+        // NOTE: UGLY, UGLY CODE -  The sourcesystem_cd field, in the case that across trials data
         // exists, will be TrialId:SubjectId, where SubjectId is a unique subject id across trials.
         ArrayList<Double> values = new ArrayList<Double>()
         Set<String> idSet = new HashSet<String>()
@@ -451,7 +451,7 @@ class I2b2HelperService {
     def Integer getPatientSetSize(String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        log.info("Getting patient set size with id:" + result_instance_id);
+        log.info("getPatientSetSize(): result_instance_id = " + result_instance_id);
         Integer i = 0;
         Sql sql = new Sql(dataSource);
         String sqlt = """select count(*) as patcount
@@ -480,7 +480,7 @@ class I2b2HelperService {
     def int getPatientSetIntersectionSize(String result_instance_id1, String result_instance_id2) {
         checkQueryResultAccess result_instance_id1, result_instance_id2
 
-        log.trace("Getting patient set intersection - result_instance_id1 = "
+        log.info("Getting patient set intersection - result_instance_id1 = "
                 + result_instance_id1 + ", result_instance_id2 = " + result_instance_id2);
         Integer i = 0;
         Sql sql = new Sql(dataSource);
@@ -1288,19 +1288,33 @@ class I2b2HelperService {
      * */
     def HashMap<String, Integer> getPatientDemographicDataForSubset(String col, String result_instance_id) {
 
-        log.trace("in getPatientDemographicDataForSubset ...")
-        log.trace("args: col = " + col + ", result_instance_id = " + result_instance_id)
+        log.info("in getPatientDemographicDataForSubset ...")
+        log.info("args: col = " + col + ", result_instance_id = " + result_instance_id)
         checkQueryResultAccess result_instance_id
 
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
         Sql sql = new Sql(dataSource)
-        String sqlt = """SELECT a.cat as demcategory, COALESCE(b.demcount,0) as demcount FROM
-		(SELECT DISTINCT UPPER(""" + col + """) as cat FROM patient_dimension) a
-		LEFT OUTER JOIN
-		(SELECT UPPER(""" + col + """) as cat,COUNT(*) as demcount FROM patient_dimension
-		WHERE PATIENT_NUM IN (select distinct patient_num from qt_patient_set_collection where result_instance_id = ?)
-		Group by UPPER(""" + col + """)) b
-		ON a.cat=b.cat ORDER BY a.cat""";
+
+        String sqlt = """SELECT cat, COUNT(subject_id) as demcount
+        FROM (
+                SELECT DISTINCT UPPER("""+ col + """) as cat, split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                FROM qt_patient_set_collection ps
+                JOIN patient_dimension pd
+                ON ps.patient_num=pd.patient_num AND result_instance_id = ?
+        ) base
+        GROUP BY cat
+        """;
+
+//      String sqlt = """SELECT a.cat as demcategory, COALESCE(b.demcount,0) as demcount FROM
+//		(SELECT DISTINCT UPPER(""" + col + """) as cat FROM patient_dimension) a
+//		LEFT OUTER JOIN
+//		(SELECT UPPER(""" + col + """) as cat,COUNT(*) as demcount FROM patient_dimension
+//		WHERE PATIENT_NUM IN (select distinct patient_num from qt_patient_set_collection where result_instance_id = ?)
+//		Group by UPPER(""" + col + """)) b
+//		ON a.cat=b.cat ORDER BY a.cat""";
+
+        log.info(sqlt)
+
         sql.eachRow(sqlt, [result_instance_id], { row ->
             if (row[1] != 0) {
                 results.put(row[0], row[1])
