@@ -1331,41 +1331,50 @@ for (int i = 0; i < mapsize; i++)
                 log.info "----------------- non-value concept renderConceptAnalysisNew"
                 def HashMap<String, Integer> results1
                 def HashMap<String, Integer> results2
-                def Map<String,HashMap<String,Integer>> results1ByTrial
-                def Map<String,HashMap<String,Integer>> results2ByTrial
+                def SortedMap<String,HashMap<String,Integer>> results1ByTrial
+                def SortedMap<String,HashMap<String,Integer>> results2ByTrial
 
-                def Set<String> studySet = new HashSet<String>();
+                def List<String> studyList = new ArrayList<String>();
 
                 int height = 0;
+
+                String allTrialsKey = "All Trails"
 
                 if (s1) {
                     results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1)
                     results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1)
                     height = 80 + 15 * results1.size()
                     log.info("results1ByTrial.size() = " + results1ByTrial.size())
+                    studyList.addAll(results1ByTrial.keySet())
                     if (results1ByTrial.size() > 1) {
-                        results1ByTrial.put("All Trials",results1)
+                        results1ByTrial.put(allTrialsKey,results1)
+                        // add it last
+                        studyList.add(allTrialsKey)
                     }
-                    studySet.addAll(results1ByTrial.keySet())
                 }
                 if (s2) {
                     results2ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id2)
                     results2 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id2)
                     height = Math.max(80 + 15 * results2.size(),height)
-                    if (results2ByTrial.size() > 1) {
-                        results2ByTrial.put("All Trials",results2)
+                    for (String key: results2ByTrial.keySet()){
+                        // maintain order but avoid duplicates
+                        if (!studyList.contains(key)) studyList.add(key);
                     }
-                    studySet.addAll(results2ByTrial.keySet())
+                    if (results2ByTrial.size() > 1) {
+                        results2ByTrial.put(allTrialsKey,results2)
+                        // add it list; if needed
+                        if (!studyList.contains(allTrialsKey)) studyList.add(allTrialsKey)
+                    }
                 }
 
-                log.info("Study key set = " + studySet)
+                log.info("Study key set = " + studyList)
 
                 pw.write("<table width='100%'><tr>");
                 pw.write("<tr><td align='center' colspan='2'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
 
-                def boolean showTrialTitle = studySet.size() > 1
+                def boolean showTrialTitle = studyList.size() > 1
 
-                for (String study: studySet) {
+                for (String study: studyList) {
 
                     log.info("Results by trial: " + study)
 

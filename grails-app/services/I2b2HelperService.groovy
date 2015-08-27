@@ -663,8 +663,8 @@ class I2b2HelperService {
             def itemProbe = conceptsResourceService.getByKey(concept_key)
             def String modifier_cd = itemProbe.modifierDimension.code
             for (String trial: trials) {
-                log.info("results for: " + trial)
-                results.put(trial, getConceptDistributionDataForConcept(concept_key, result_instance_id))
+                log.info("results for: " + trial + ", " + concept_key)
+                results.put(trial, getAllObservationCountsForXTrailsConceptNodeWithTrail(trial, concept_key, result_instance_id))
             }
 
         } else {
@@ -824,10 +824,26 @@ class I2b2HelperService {
         return i;
     }
 
+    def HashMap<String, Integer> getAllObservationCountsForXTrailsConceptNodeWithTrail(String trial, String concept_key, String result_instance_id)  throws SQLException {
+        checkQueryResultAccess result_instance_id
+
+        HashMap<String, Integer> results = new HashMap<String,Integer>()
+
+        def node = conceptsResourceService.getByKey(concept_key)
+        def List<OntologyTerm> childNodes = node.children
+        for (OntologyTerm term: childNodes) {
+            log.info("Would get information for " + term.fullName + " with trial = " + trial)
+//            results.put(term.fullName,getObservationCountForXTrailsNode(trail,term))
+            results.put(term.name,3)
+        }
+
+        return results;
+    }
+
     def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node, String result_instance_id) {
         log.info "--------  start getObservationCountForXTrailsNode"
         log.info "---------- case: term_nade and result_instance_id"
-        log.info "tern_node = " + term_node
+        log.info "tern_node.name = " + term_node.name
         checkQueryResultAccess result_instance_id
 
         def modifierList = []
