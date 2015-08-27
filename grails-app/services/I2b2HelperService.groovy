@@ -240,7 +240,7 @@ class I2b2HelperService {
      * Determines if a concept key is a value concept or not
      */
     def Boolean isValueConceptKey(String concept_key) {
-        log.trace "----------------------------------------------------------- start isValueConceptKey"
+        log.trace "----------------- start isValueConceptKey"
         log.trace "concept_key: " + concept_key
         if (isXTrialsConcept(concept_key)) {
             def itemProbe = conceptsResourceService.getByKey(concept_key)
@@ -266,7 +266,7 @@ class I2b2HelperService {
         // A special case was made for across trials data, because, at this time of this change,
         // there is no unified representation of across trials data and 'normal' data
 
-        log.debug "----------------------------------------------------------- isLeafConceptKey - String case"
+        log.debug "----------------- isLeafConceptKey - String case"
 
         if (isXTrialsConcept(concept_key)) {
             def itemProbe = conceptsResourceService.getByKey(concept_key)
@@ -289,7 +289,7 @@ class I2b2HelperService {
         // and this is a patch on top of a mess; the correct solution is to rewrite all this code
         // to use the API and to rewrite the underlying object class to use the API.
 
-        log.debug "----------------------------------------------------------- isLeafConceptKey - AcrossTrialsOntologyTerm case"
+        log.debug "----------------- isLeafConceptKey - AcrossTrialsOntologyTerm case"
         EnumSet probeSet = conceptItem.visualAttributes
         if (probeSet.size() == 0) return false;
         return probeSet.any{ it == org.transmartproject.core.ontology.OntologyTerm.VisualAttributes.LEAF }
@@ -302,7 +302,7 @@ class I2b2HelperService {
         // profuse appoligies to future programmers reading this code; it is clearly a mess
         // and this is a patch on top of a mess; the correct solution is to rewrite all this code
         // to use the API and to rewrite the underlying object class to use the API.
-        log.debug "----------------------------------------------------------- isLeafConceptKey - I2b2 case"
+        log.debug "----------------- isLeafConceptKey - I2b2 case"
         return conceptItem.cVisualattributes.contains("L")
     }
 
@@ -310,7 +310,7 @@ class I2b2HelperService {
      * Gets the distinct patient counts for the children of a parent concept key
      */
     def getChildrenWithPatientCountsForConcept(String concept_key) {
-        log.info "----------------------------------------------------------- getChildrenWithPatientCountsForConcept"
+        log.info "----------------- getChildrenWithPatientCountsForConcept"
         log.debug "concept_key = " + concept_key
 
         def xTrailsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
@@ -364,7 +364,7 @@ class I2b2HelperService {
      * for display in a distribution histogram for a given subset
      */
     def getConceptDistributionDataForValueConcept(String concept_key, String result_instance_id) {
-        log.debug "----------------------------------------------------------- getConceptDistributionDataForValueConcept"
+        log.debug "----------------- getConceptDistributionDataForValueConcept"
         log.debug("Getting concept distribution data for value concept_key, " + concept_key + ", with results_instance_id = " + result_instance_id);
 
         checkQueryResultAccess result_instance_id
@@ -410,7 +410,7 @@ class I2b2HelperService {
     }
 
     def getConceptDistributionDataForValueConceptFromCode(String concept_cd, String result_instance_id) {
-        log.debug "----------------------------------------------------------- getConceptDistributionDataForValueConceptFromCode"
+        log.debug "----------------- getConceptDistributionDataForValueConceptFromCode"
         log.debug("Getting concept distribution data for value concept_cd, " + concept_cd + ", with results_instance_id = " + result_instance_id);
 
         checkQueryResultAccess result_instance_id
@@ -549,7 +549,7 @@ class I2b2HelperService {
      * Determines if a concept code is a value concept code or not by checking the metadata xml
      */
     def Boolean isValueConceptCode(String concept_code) {
-        log.debug "----------------------------------------------------------- start isValueConceptCode"
+        log.debug "----------------- start isValueConceptCode"
         log.debug "Checking isValueConceptCode for code:" + concept_code
         Boolean res = false;
         Sql sql = new Sql(dataSource);
@@ -594,13 +594,13 @@ class I2b2HelperService {
     }
 
     def HashMap<String, Integer> getConceptDistributionDataForConcept(String concept_key, String result_instance_id) throws SQLException {
-        log.debug "----------------------------------------------------------- start getConceptDistributionDataForConcept"
+        log.debug "----------------- start getConceptDistributionDataForConcept"
         checkQueryResultAccess result_instance_id
 
         def xTrialsCaseFlag = isXTrialsConcept(concept_key)
         def leafNodeFlag = isLeafConceptKey(concept_key)
 
-        HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
+        def HashMap<String, Integer> results = new LinkedHashMap<String, Integer>()
 
         log.trace "input concept_key = " + concept_key
         if (leafNodeFlag) {
@@ -608,9 +608,10 @@ class I2b2HelperService {
         }
         log.trace "lookup concept_key = " + concept_key
 
+        def node = conceptsResourceService.getByKey(concept_key)
+
         if (xTrialsCaseFlag) {
             log.trace("XTrials for getConceptDistributionDataForConcept")
-            def node = conceptsResourceService.getByKey(concept_key)
             def List<OntologyTerm> childNodes = node.children
             for (OntologyTerm term: childNodes) {
                 results.put(term.name,getObservationCountForXTrailsNode(term,result_instance_id))
@@ -636,6 +637,48 @@ class I2b2HelperService {
         return results;
     }
 
+    def SortedMap<String, HashMap<String, Integer>> getConceptDistributionDataForConceptByTrial(String concept_key, String result_instance_id) throws SQLException {
+        log.info "----------------- start getConceptDistributionDataForConceptByTrial"
+        checkQueryResultAccess result_instance_id
+
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key)
+        def leafNodeFlag = isLeafConceptKey(concept_key)
+
+        def SortedMap<String, HashMap<String, Integer>> results = new TreeMap<String, HashMap<String, Integer>>()
+
+        log.info "input concept_key = " + concept_key
+        if (leafNodeFlag) {
+            concept_key = getParentConceptKey(concept_key)
+        }
+        log.info "lookup concept_key = " + concept_key
+
+        def baseNode = conceptsResourceService.getByKey(concept_key)
+        log.info(baseNode.class.name)
+
+        def List<String> trials = trailsForResultSet(result_instance_id)
+        log.info("trials = " + trials)
+
+        if (xTrialsCaseFlag) {
+            log.info("Across Trials case")
+            def itemProbe = conceptsResourceService.getByKey(concept_key)
+            def String modifier_cd = itemProbe.modifierDimension.code
+            for (String trial: trials) {
+                log.info("results for: " + trial)
+                results.put(trial, getConceptDistributionDataForConcept(concept_key, result_instance_id))
+            }
+
+        } else {
+            log.info("Single study case")
+            // if not across trials; all parients in same trial/study
+            def study = "Study"
+            if (!trials.isEmpty()) study = trials[0]
+            results.put(study,getConceptDistributionDataForConcept(concept_key, result_instance_id))
+        }
+
+        log.info("results.size() = " + results.size())
+
+        return results
+    }
     /**
      * Gets the distribution of data for a concept
      */
@@ -674,7 +717,7 @@ class I2b2HelperService {
      *  Gets the concept distributions for a concept in a subset
      */
     def HashMap<String, Integer> getConceptDistributionDataForConceptOld2(String concept_key, String result_instance_id) throws SQLException {
-        log.debug "----------------------------------------------------------- start getConceptDistributionDataForConcept"
+        log.debug "----------------- start getConceptDistributionDataForConcept"
         String fullname = concept_key.substring(concept_key.indexOf("\\", 2), concept_key.length());
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
 
@@ -784,6 +827,7 @@ class I2b2HelperService {
     def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node, String result_instance_id) {
         log.info "--------  start getObservationCountForXTrailsNode"
         log.info "---------- case: term_nade and result_instance_id"
+        log.info "tern_node = " + term_node
         checkQueryResultAccess result_instance_id
 
         def modifierList = []
@@ -1036,7 +1080,7 @@ class I2b2HelperService {
     def ExportTableNew addConceptDataToTable(ExportTableNew tablein, String concept_key, String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        log.debug "----------------------------------------------------------- start addConceptDataToTable"
+        log.debug "----------------- start addConceptDataToTable"
         log.trace "concept_key = " + concept_key
         log.trace "is Leaf Concept key: " + isLeafConceptKey(concept_key)
 
@@ -1048,7 +1092,7 @@ class I2b2HelperService {
         log.trace "is XTrials case = " + xTrialsCaseFlag
 
         if (isLeafConceptKey(concept_key)) {
-            log.trace "----------------------------------------------------------- this is a Leaf Node"
+            log.trace "----------------- this is a Leaf Node"
 
             /*add the column to the table if its not there*/
             if (tablein.getColumn("subject") == null) {
@@ -1078,7 +1122,7 @@ class I2b2HelperService {
             // Check whether the folder is valid: first find all children of the current code
             def item = conceptsResourceService.getByKey(concept_key)
 
-            log.info "----------------------------------------------------------- this is Folder Node"
+            log.info "----------------- this is Folder Node"
             log.info "concept_key = " + concept_key
             log.info item.class.name
 
@@ -1088,7 +1132,7 @@ class I2b2HelperService {
 
             // All children should be leaf categorical values
             if (item.children.any {
-                log.info "----------------------------------------------------------- it's child class"
+                log.info "----------------- it's child class"
                 log.info it.class.name
 				if (xTrialsCaseFlag) {
 					return !isLeafConceptKey(it)
@@ -1099,7 +1143,7 @@ class I2b2HelperService {
                 return tablein
             }
 
-            log.info "----------------------------------------------------------- all folder child nodes are categorical leaf nodes"
+            log.info "----------------- all folder child nodes are categorical leaf nodes"
 
             /*add the column to the table if its not there*/
             if (tablein.getColumn("subject") == null) {
@@ -1157,7 +1201,7 @@ class I2b2HelperService {
                 }
             }
         }
-        log.debug "----------------------------------------------------------- end addConceptDataToTable"
+        log.debug "----------------- end addConceptDataToTable"
         return tablein;
     }
 
@@ -1165,7 +1209,7 @@ class I2b2HelperService {
         def valueLeafNodeFlag = isValueConceptKey(concept_key)
         def dataList = []
         if (valueLeafNodeFlag) {
-            log.debug "----------------------------------------------------------- this is a value Leaf Node"
+            log.debug "----------------- this is a value Leaf Node"
             log.debug "concept_key = " + concept_key
             /*get the data*/
             String concept_cd = getConceptCodeFromKey(concept_key)
@@ -1184,7 +1228,7 @@ class I2b2HelperService {
             })
         } else {
             String concept_cd = getConceptCodeFromKey(concept_key);
-            log.trace "----------------------------------------------------------- this is a non-value, catigorical, Leaf Node"
+            log.trace "----------------- this is a non-value, catigorical, Leaf Node"
             log.trace "concept_key = " + concept_key
             log.trace "concept_cd = " + concept_cd
             Sql sql = new Sql(dataSource)
@@ -1206,7 +1250,7 @@ class I2b2HelperService {
     }
 
     def insertConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein) {
-        log.debug "----------------------------------------------------------- insertConceptDataIntoTable"
+        log.debug "----------------- insertConceptDataIntoTable"
         log.debug "for columnid = " + columnid
         def data = fetchConceptData(concept_key,result_instance_id)
         data.each{
@@ -1230,7 +1274,7 @@ class I2b2HelperService {
         def dataList = []
 
         if (valueLeafNodeFlag) {
-            log.debug "----------------------------------------------------------- this is a value Leaf Node"
+            log.debug "----------------- this is a value Leaf Node"
             log.debug "concept_key = " + concept_key
 
             Sql sql = new Sql(dataSource)
@@ -1256,7 +1300,7 @@ class I2b2HelperService {
                 dataList.add(['subject': subject, 'value': value])
             })
         } else {
-            log.trace "----------------------------------------------------------- this is a non-value, catigorical, Leaf Node"
+            log.trace "----------------- this is a non-value, catigorical, Leaf Node"
             log.trace "concept_key = " + concept_key
             log.warn "fetchAcrossTiralsData non-value, catigorical, Leaf Node NOT IMPLEMENTED"
         }
@@ -1264,7 +1308,7 @@ class I2b2HelperService {
     }
 
     def insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein) {
-        log.debug "----------------------------------------------------------- insertAcrossTrialsConceptDataIntoTable"
+        log.debug "----------------- insertAcrossTrialsConceptDataIntoTable"
         log.debug "for columnid = " + columnid
 
         def data = fetchAcrossTiralsData(concept_key,result_instance_id)
@@ -5275,7 +5319,7 @@ class I2b2HelperService {
      * for display in a distribution histogram for a given subset
      */
     def getConceptDistributionDataForValueConceptByTrial(String concept_key, String result_instance_id) {
-        log.info "----------------------------------------------------------- getConceptDistributionDataForValueConceptByTrial"
+        log.info "----------------- getConceptDistributionDataForValueConceptByTrial"
 
         checkQueryResultAccess result_instance_id
         log.trace "access assured"
@@ -5345,12 +5389,12 @@ class I2b2HelperService {
             }
 
         }
-        log.debug "----------------------------------------------------------- end getConceptDistributionDataForValueConceptByTrial"
+        log.debug "----------------- end getConceptDistributionDataForValueConceptByTrial"
         return trialdata;
     }
 
     def getConceptDistributionDataForValueConceptByTrialByConcepts(Set<String> childConcepts, String result_instance_id) {
-        log.debug "----------------------------------------------------------- getConceptDistributionDataForValueConceptByTrialByConcepts"
+        log.debug "----------------- getConceptDistributionDataForValueConceptByTrialByConcepts"
 
         checkQueryResultAccess result_instance_id
         log.trace "Access assured"
@@ -5471,7 +5515,7 @@ class I2b2HelperService {
      * Gets the children with access for a concept
      */
     def getChildrenWithAccessForUserNew(String concept_key, AuthUser user) {
-        log.debug "----------------------------------------------------------- getChildrenWithAccessForUserNew"
+        log.debug "----------------- getChildrenWithAccessForUserNew"
 
         def xTrailsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
         def xTrialsCaseFlag = isXTrialsConcept(concept_key) || (concept_key == xTrailsTopNode)
@@ -6101,6 +6145,27 @@ class I2b2HelperService {
             })
             return trials;
         }
+    }
+
+    def List<String> trailsForResultSet (String result_instance_id) {
+        checkQueryResultAccess result_instance_id
+
+        List<String> trails = new ArrayList<String>();
+        Sql sql = new Sql(dataSource)
+        String sqlt = """
+            SELECT distinct trial
+            FROM patient_trial pt
+                JOIN qt_patient_set_collection psc
+                    ON pt.patient_num=psc.patient_num
+            WHERE psc.result_instance_id = ?
+            ORDER BY trial
+            """
+        log.info(sqlt)
+        sql.eachRow(sqlt, [result_instance_id], {row ->
+            trails.add(row.trial)
+        })
+
+        return trails
     }
 }
 

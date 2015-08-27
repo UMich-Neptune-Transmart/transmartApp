@@ -187,6 +187,14 @@ div.analysistitle {
 	font-family:arial;
 }
 
+div.analysis-study-title {
+    margin: auto;
+    font-size: 11pt;
+    font-weight: bold;
+    font-family:arial;
+    padding: 10px 5px 5px 5px; /* top right bottom left */
+}
+
 
 	.searchform {
 	font:12px tahoma, arial, helvetica, sans-serif;

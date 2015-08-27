@@ -42,6 +42,7 @@ import java.awt.*
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.List
+import java.util.HashSet
 
 //import edu.mit.wi.haploview.*;
 class ChartController {
@@ -250,7 +251,7 @@ class ChartController {
      */
     def analysis = {
 
-        log.debug "----------------------------------------------------------- analysis - starting "
+        log.debug "----------------- analysis - starting "
 
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
@@ -277,13 +278,13 @@ class ChartController {
 
         //	log.debug("child concepts: "+cconcepts);
 
-        log.debug "----------------------------------------------------------- analysis - continuing"
+        log.debug "----------------- analysis - continuing"
         log.trace("calling renderConceptAnalysisNew from analysis with analysis_key:" + analysis_key);
         log.trace("calling with result_instance_id1:" + result_instance_id1);
         log.trace("calling with result_instance_id2:" + result_instance_id2);
         renderConceptAnalysisNew(analysis_key, result_instance_id1, result_instance_id2, pw, request);
         log.trace "return from renderConceptAnalysisNew"
-        log.debug "----------------------------------------------------------- analysis - continuing"
+        log.debug "----------------- analysis - continuing"
         pw.write("<hr>");
         if (!i2b2HelperService.isLeafConceptKey(analysis_key)) //must be a folder so render all the value children
         {
@@ -300,7 +301,7 @@ class ChartController {
         }
         //renderPatientCountInfoTable(result_instance_id1, result_instance_id2, pw);
         pw.write("</div></body></html>");
-        log.debug "----------------------------------------------------------- analysis - ending"
+        log.debug "----------------- analysis - ending"
         pw.flush();
     }
 
@@ -626,7 +627,7 @@ class ChartController {
 
     def analysisGrid = {
 
-        log.debug "----------------------------------------------------------- starting ChartController analysisGrid"
+        log.debug "----------------- starting ChartController analysisGrid"
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
         def result_instance_id2 = params.result_instance_id2;
@@ -685,7 +686,7 @@ class ChartController {
         pw.write(table.toJSONObject().toString(5));
         pw.flush();
 
-        log.debug "----------------------------------------------------------- ending ChartController analysisGrid"
+        log.debug "----------------- ending ChartController analysisGrid"
 
         request.getSession().setAttribute("gridtable", table);
     }
@@ -1045,22 +1046,21 @@ for (int i = 0; i < mapsize; i++)
     }
 
     private void renderConceptAnalysisNew(String concept_key, String result_instance_id1, String result_instance_id2, PrintWriter pw, HttpServletRequest request) {
-        log.debug "----------------------------------------------------------- start ChartController renderConceptAnalysisNew"
-        log.debug("renderConceptAnalysisNew: rendering " + concept_key)
+        log.info "----------------- start ChartController renderConceptAnalysisNew"
         try {
-            log.trace("Rendering concept analysis for concept key: " + concept_key)
+            log.info("Rendering concept analysis for concept key: " + concept_key)
             /*get variables*/
             String concept_cd = null;
             String concept_name = null;
             concept_cd = i2b2HelperService.getConceptCodeFromKey(concept_key);
             concept_name = i2b2HelperService.getShortNameFromKey(concept_key);
-            log.trace("concept:" + concept_key + " - concept_cd " + concept_cd);
+            log.info("concept:" + concept_key + " - concept_cd " + concept_cd);
 
             def leafNodeFlag = i2b2HelperService.isLeafConceptKey(concept_key)
             def valueLeafNodeFlag = leafNodeFlag && i2b2HelperService.isValueConceptKey(concept_key)
             def xTrialsFlag = i2b2HelperService.isXTrialsConcept(concept_key)
 
-            log.trace("Flags: leafNodeFlag = " + leafNodeFlag + ", valueLeafNodeFlag = " + valueLeafNodeFlag + ", xTrialsFlag = " + xTrialsFlag)
+            log.info("Flags: leafNodeFlag = " + leafNodeFlag + ", valueLeafNodeFlag = " + valueLeafNodeFlag + ", xTrialsFlag = " + xTrialsFlag)
 
             StringWriter sw1 = new StringWriter();
             StringWriter sw2 = new StringWriter();
@@ -1074,19 +1074,18 @@ for (int i = 0; i < mapsize; i++)
                 s2 = false;
             }
 
-            log.info "----------------------------------------------------------- render - before value test"
-            log.debug "concept_cd = " + concept_cd
+            log.info "----------------- render - before value test"
 
             if (valueLeafNodeFlag) {
 
                 Set<String> childConcepts = new HashSet<String>();
 
-                log.info "----------------------------------------------------------- for value Node"
+                log.info "----------------- for value Node"
 
                 ArrayList<Double> valuesAlist3 = new ArrayList<Double>();
                 ArrayList<Double> valuesAlist4 = new ArrayList<Double>();
 
-                log.trace "----------------------------------------------------------- before data fetch"
+                log.trace "----------------- before data fetch"
                 if (xTrialsFlag) {
                     // NOTE: as of this implementation there is no concept_cd value for xTrials data!
                     if (s1) valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1));
@@ -1108,16 +1107,16 @@ for (int i = 0; i < mapsize; i++)
 
                     log.trace("Iterating through child concepts");
                     for (c in childConcepts) {
-                        log.debug("\tc: " + c);
+                        log.debug("\tconcept: " + c);
                         valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id1));
-                        log.trace("added to values3");
+                        log.trace("\tadded to values3");
                         valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id2));
-                        log.trace("added to values4");
+                        log.trace("\tadded to values4");
                     }
 
                     log.trace("\tA done iterating through child concepts");
                 }
-                log.info "----------------------------------------------------------- after data fetch"
+                log.info "----------------- after data fetch"
                 log.info("valuesAlist3:" + valuesAlist3);
                 log.info("valuesAlist4:" + valuesAlist4);
 
@@ -1135,7 +1134,7 @@ for (int i = 0; i < mapsize; i++)
                 if (s2) {
                     dataset3.addSeries("Subset 2", values4, 10, StatHelper.min(values4), StatHelper.max(values4));
                 }
-                log.trace "---------------------------------------------------------- render histogram"
+                log.info "---------------- render histogram"
                 JFreeChart chart3 = ChartFactory.createHistogram(
                         "Histogram of " + concept_name,
                         null,
@@ -1187,7 +1186,7 @@ for (int i = 0; i < mapsize; i++)
 
                 log.debug("B getting data distribution for child concepts by trial");
 
-                log.info "----------------------------------------------------------- data by trial"
+                log.info "----------------- data by trial"
 
                 if (xTrialsFlag) {
                     // NOTE: as of this implementation there are no concept_cd values for xTrials data!
@@ -1202,7 +1201,7 @@ for (int i = 0; i < mapsize; i++)
                 log.trace("class of results1: " + results1.getClass() + ", class of results2:" + results2.getClass());
 
                 log.trace(results1 as JSON)
-                log.info "----------------------------------------------------------- render BoxAndWisker for data by trial"
+                log.info "----------------- render BoxAndWisker for data by trial"
                 def width = 200;
                 def offset = 40;
                 DefaultBoxAndWhiskerCategoryDataset dataset = new DefaultBoxAndWhiskerCategoryDataset();
@@ -1273,7 +1272,7 @@ for (int i = 0; i < mapsize; i++)
                 String filename = ServletUtilities.saveChartAsJPEG(chart, width, 300, info, request.getSession());
                 String graphURL = request.getContextPath() + "/chart/displayChart?filename=" + filename;
 
-                log.info "----------------------------------------------------------- render table for results"
+                log.info "----------------- render table for results"
 
                 pw.write("<table>");
                 pw.write("<tr><td align='center' colspan='5'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
@@ -1309,7 +1308,7 @@ for (int i = 0; i < mapsize; i++)
                     pw.write(sw2.toString());
                     pw.write("</tr></table></td></tr></table>");
                 } else {
-                    log.debug("No results found for either " + concept_name + " or equivalent concepts for subset 1.")
+                    log.debug("No results found for either " + concept_name + " or equivalent concepts for subset 2.")
                 }
                 pw.write("</td><tr><td align=\"center\" colspan=2>");
 
@@ -1329,60 +1328,91 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("</td></tr></td></tr></table></td></tr></table>")
 
             } else {
-                log.info "----------------------------------------------------------- non-value concept renderConceptAnalysisNew"
-                HashMap<String, Integer> results1;
-                HashMap<String, Integer> results2;
+                log.info "----------------- non-value concept renderConceptAnalysisNew"
+                def HashMap<String, Integer> results1
+                def HashMap<String, Integer> results2
+                def Map<String,HashMap<String,Integer>> results1ByTrial
+                def Map<String,HashMap<String,Integer>> results2ByTrial
+
+                def Set<String> studySet = new HashSet<String>();
+
+                int height = 0;
+
                 if (s1) {
-                    results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1);
-                    log.trace("concept_key:" + concept_key + ", results1: " + results1);
+                    results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1)
+                    results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1)
+                    height = 80 + 15 * results1.size()
+                    log.info("results1ByTrial.size() = " + results1ByTrial.size())
+                    if (results1ByTrial.size() > 1) {
+                        results1ByTrial.put("All Trials",results1)
+                    }
+                    studySet.addAll(results1ByTrial.keySet())
                 }
                 if (s2) {
-                    results2 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id2);
-                    log.trace("concept_key:" + concept_key + ", results2: " + results2);
+                    results2ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id2)
+                    results2 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id2)
+                    height = Math.max(80 + 15 * results2.size(),height)
+                    if (results2ByTrial.size() > 1) {
+                        results2ByTrial.put("All Trials",results2)
+                    }
+                    studySet.addAll(results2ByTrial.keySet())
                 }
-                int height = 80 + 15 * results1.size();
-                /*printHashMap(results1, pw);*/
+
+                log.info("Study key set = " + studySet)
 
                 pw.write("<table width='100%'><tr>");
                 pw.write("<tr><td align='center' colspan='2'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
-                pw.write("<tr><td width='50%'>");
-                if (s1) {
 
-                    JFreeChart chart5 = createConceptAnalysisBarChart(hashMapToCategoryDataset(results1, "Subset 1"), "Subset 1");
-                    ChartRenderingInfo info5 = new ChartRenderingInfo(new StandardEntityCollection());
-                    String filename5 = ServletUtilities.saveChartAsJPEG(chart5, 400, height, info5, request.getSession());
-                    String graphURL5 = request.getContextPath() + "/chart/displayChart?filename=" + filename5;
-                    pw.write("<img src='" + graphURL5 + "' width=400 height=" + height + " border=0 usemap='#" + filename5 + "'>");
-                    ChartUtilities.writeImageMap(pw, filename5, info5, false);
+                def boolean showTrialTitle = studySet.size() > 1
+
+                for (String study: studySet) {
+
+                    log.info("Results by trial: " + study)
+
+                    pw.write("<tr><td align='center' width='50%'>");
+                    if (s1) {
+                        pw.write("<div class='analysis-study-title'>Trial: " + study + "</div>")
+                        results1 = results1ByTrial.get(study)
+                        renderConceptAnalysisBarChart(pw,"Subset 1",results1,height)
+                    }
+                    pw.write("</td><td align='center' width='50%'>");
+                    if (s2) {
+                        pw.write("<div class='analysis-study-title'>Trial: " + study + "</div>")
+                        renderConceptAnalysisBarChart(pw,"Subset 2",results2,height)
+                        results2 = results2ByTrial.get(study)
+                    }
+                    pw.write("</td></tr>");
+                    pw.write("<tr><td align='center'>");
+                    if (s1) {
+                        renderCategoryResultsHashMap(results1,"Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1), pw);
+                    }
+                    pw.write("</td><td align='center'>");
+                    if (s2) {
+                        renderCategoryResultsHashMap(results2,"Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2), pw);
+                    }
+                    pw.write("</td></tr>")
                 }
-                pw.write("</td><td align='center'>");
-                if (s2) {
-                    JFreeChart chart6 = createConceptAnalysisBarChart(hashMapToCategoryDataset(results2, "Subset 2"), "Subset 2");
-                    ChartRenderingInfo info6 = new ChartRenderingInfo(new StandardEntityCollection());
-                    String filename6 = ServletUtilities.saveChartAsJPEG(chart6, 400, height, info6, request.getSession());
-                    String graphURL6 = request.getContextPath() + "/chart/displayChart?filename=" + filename6;
-                    pw.write("<img src='" + graphURL6 + "' width=400 height=" + height + " border=0 usemap='#" + filename6 + "'>");
-                    ChartUtilities.writeImageMap(pw, filename6, info6, false);
-                }
-                pw.write("</td><tr><td align='center'>");
-                if (s1) {
-                    renderCategoryResultsHashMap(results1, "Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1), pw);
-                }
-                pw.write("</td><td align='center'>");
-                if (s2) {
-                    renderCategoryResultsHashMap(results2, "Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2), pw);
-                }
-                pw.write("</td></tr><tr><td align=\"center\" colspan=2><p>");
-                renderChiSquaredHashMap(results1, results2, pw);
-                pw.write("<td><tr><p></table>")
+                pw.write("<tr><td align=\"center\" colspan=2><p>")
+                renderChiSquaredHashMap(results1, results2, pw)
+                pw.write("<td><tr>")
+                pw.write("</table>")
 
             }
-            log.trace("renderConceptAnalysisNew: finished rendering " + concept_key)
+            log.info("renderConceptAnalysisNew: finished rendering " + concept_key)
         }
         catch (Exception e) {
             log.error(e); e.printStackTrace();
         }
-        log.debug "----------------------------------------------------------- done renderConceptAnalysisNew"
+        log.info "----------------- done renderConceptAnalysisNew"
+    }
+
+    private void renderConceptAnalysisBarChart(PrintWriter pw, String subsetTitle, HashMap<String, Integer> results, int height) {
+        JFreeChart chart5 = createConceptAnalysisBarChart(hashMapToCategoryDataset(results, subsetTitle), subsetTitle);
+        ChartRenderingInfo info5 = new ChartRenderingInfo(new StandardEntityCollection());
+        String filename5 = ServletUtilities.saveChartAsJPEG(chart5, 400, height, info5, request.getSession());
+        String graphURL5 = request.getContextPath() + "/chart/displayChart?filename=" + filename5;
+        pw.write("<img src='" + graphURL5 + "' width=400 height=" + height + " border=0 usemap='#" + filename5 + "'>");
+        ChartUtilities.writeImageMap(pw, filename5, info5, false);
     }
 
     private void renderBoxAndWhiskerInfoTableNew(List<Number> values, String trial, StringWriter pw) {
