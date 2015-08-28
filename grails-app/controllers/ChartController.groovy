@@ -936,7 +936,7 @@ class ChartController {
     private CategoryDataset hashMapToCategoryDataset(HashMap<String, Integer> results, String seriesname) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         int mapsize = results.size();
-        Iterator keyValuePairs1 = results.entrySet().iterator();
+        Iterator keyValuePairs1 = results.entrySet().sort({it.key}).iterator();
         for (int i = 0; i < mapsize; i++) {
             Map.Entry<String, Integer> entry = (Map.Entry<String, Integer>) keyValuePairs1.next();
             String key = entry.getKey();
@@ -1344,7 +1344,6 @@ for (int i = 0; i < mapsize; i++)
                     results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1)
                     results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1)
                     height = 80 + 15 * results1.size()
-                    log.info("results1ByTrial.size() = " + results1ByTrial.size())
                     studyList.addAll(results1ByTrial.keySet())
                     if (results1ByTrial.size() > 1) {
                         results1ByTrial.put(allTrialsKey,results1)
@@ -1362,7 +1361,7 @@ for (int i = 0; i < mapsize; i++)
                     }
                     if (results2ByTrial.size() > 1) {
                         results2ByTrial.put(allTrialsKey,results2)
-                        // add it list; if needed
+                        // add it last; if needed
                         if (!studyList.contains(allTrialsKey)) studyList.add(allTrialsKey)
                     }
                 }
@@ -1387,8 +1386,8 @@ for (int i = 0; i < mapsize; i++)
                     pw.write("</td><td align='center' width='50%'>");
                     if (s2) {
                         pw.write("<div class='analysis-study-title'>Trial: " + study + "</div>")
-                        renderConceptAnalysisBarChart(pw,"Subset 2",results2,height)
                         results2 = results2ByTrial.get(study)
+                        renderConceptAnalysisBarChart(pw,"Subset 2",results2,height)
                     }
                     pw.write("</td></tr>");
                     pw.write("<tr><td align='center'>");
@@ -1400,10 +1399,10 @@ for (int i = 0; i < mapsize; i++)
                         renderCategoryResultsHashMap(results2,"Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2), pw);
                     }
                     pw.write("</td></tr>")
+                    pw.write("<tr><td align=\"center\" colspan=2><p>")
+                    renderChiSquaredHashMap(results1, results2, pw)
+                    pw.write("</td></tr>")
                 }
-                pw.write("<tr><td align=\"center\" colspan=2><p>")
-                renderChiSquaredHashMap(results1, results2, pw)
-                pw.write("<td><tr>")
                 pw.write("</table>")
 
             }
