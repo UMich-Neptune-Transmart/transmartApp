@@ -771,7 +771,7 @@ class ChartController {
             Integer value = entry.getValue();
             total = total + value;
         }
-        Iterator keyValuePairs2 = results.entrySet().iterator();
+        Iterator keyValuePairs2 = results.entrySet().sort({it.key}).iterator();
         pw.write("<tr>"
                 + "<th>Category</th>"
                 + "<th>" + title + " (n)</th>"
@@ -1338,7 +1338,7 @@ for (int i = 0; i < mapsize; i++)
 
                 int height = 0;
 
-                String allTrialsKey = "All Trails"
+                String allTrialsKey = "All Trials"
 
                 if (s1) {
                     results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1)
@@ -1377,15 +1377,19 @@ for (int i = 0; i < mapsize; i++)
 
                     log.info("Results by trial: " + study)
 
+                    def trialTitle = (study == allTrialsKey)?study:"Trial: " + study
+
+                    log.info("Trial title = " + trialTitle)
+
                     pw.write("<tr><td align='center' width='50%'>");
                     if (s1) {
-                        pw.write("<div class='analysis-study-title'>Trial: " + study + "</div>")
+                        pw.write("<div class='analysis-study-title'>" + trialTitle + "</div>")
                         results1 = results1ByTrial.get(study)
                         renderConceptAnalysisBarChart(pw,"Subset 1",results1,height)
                     }
                     pw.write("</td><td align='center' width='50%'>");
                     if (s2) {
-                        pw.write("<div class='analysis-study-title'>Trial: " + study + "</div>")
+                        pw.write("<div class='analysis-study-title'>" + trialTitle + "</div>")
                         results2 = results2ByTrial.get(study)
                         renderConceptAnalysisBarChart(pw,"Subset 2",results2,height)
                     }
