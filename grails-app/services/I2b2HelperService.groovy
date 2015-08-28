@@ -827,15 +827,55 @@ class I2b2HelperService {
     def HashMap<String, Integer> getAllObservationCountsForXTrailsConceptNodeWithTrail(String trial, String concept_key, String result_instance_id)  throws SQLException {
         checkQueryResultAccess result_instance_id
 
-        HashMap<String, Integer> results = new HashMap<String,Integer>()
-
         def node = conceptsResourceService.getByKey(concept_key)
         def List<OntologyTerm> childNodes = node.children
-        for (OntologyTerm term: childNodes) {
-            log.info("Would get information for " + term.fullName + " with trial = " + trial)
-//            results.put(term.fullName,getObservationCountForXTrailsNode(trail,term))
-            results.put(term.name,3)
+
+        def modifierList = []
+        childNodes.each { childNode ->
+            modifierList.add(childNode.code)
         }
+
+        log.info "modifierList = " + modifierList
+        log.info "result_instance_id = " + result_instance_id
+        log.info "trial = " + trial
+
+        def sqlt = """
+            SELECT count(subject_id) as n, modifier_cd
+            FROM (
+                SELECT DISTINCT modifier_cd, split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                FROM
+                    observation_fact f
+                    JOIN patient_dimension pd ON f.patient_num=pd.patient_num
+                    JOIN patient_trial pt ON pt.patient_num=pd.patient_num AND pt.trial=?
+                WHERE
+                    modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
+                    AND concept_cd != 'SECURITY'
+                    AND f.patient_num IN (
+                        SELECT DISTINCT patient_num
+                        FROM qt_patient_set_collection
+                        WHERE result_instance_id = ?)
+                ) AS subject_data
+            group by modifier_cd
+        """
+
+        log.info sqlt
+
+        def map = [:]
+        Sql sql = new Sql(dataSource)
+        sql.eachRow(sqlt, [trial,result_instance_id], { row ->
+            map.put(row.modifier_cd, row.n)
+        })
+
+        HashMap<String, Integer> results = new HashMap<String,Integer>()
+        for (OntologyTerm term: childNodes) {
+            int count = 0
+            if (map.get(term.code)){
+                count = map.get(term.code)
+            }
+            results.put(term.name,count)
+        }
+
+        log.info(results)
 
         return results;
     }
