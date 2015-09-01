@@ -67,7 +67,7 @@ class I2b2HelperService {
 			        from qt_patient_set_collection
 			        where result_instance_id = ?)""";
         sql.eachRow(sqlt, [result_instance_id], { row ->
-//            log.info("row: " + row[0] + "," + row[1] + "," + row[2])
+//            log.trace("row: " + row[0] + "," + row[1] + "," + row[2])
             def id = row[2];
             if (row[1]) {
                 def holder = []
@@ -76,7 +76,7 @@ class I2b2HelperService {
                     id = holder[1];
                 }
             }
-//            log.info ("id = " + id)
+//            log.trace ("id = " + id)
             if (!idSet.contains(id)) {
                 idSet.add(id)
                 values.add(row[0])
@@ -310,7 +310,7 @@ class I2b2HelperService {
      * Gets the distinct patient counts for the children of a parent concept key
      */
     def getChildrenWithPatientCountsForConcept(String concept_key) {
-        log.info "----------------- getChildrenWithPatientCountsForConcept"
+        log.debug "----------------- getChildrenWithPatientCountsForConcept"
         log.debug "concept_key = " + concept_key
 
         def xTrailsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
@@ -451,7 +451,7 @@ class I2b2HelperService {
     def Integer getPatientSetSize(String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        log.info("getPatientSetSize(): result_instance_id = " + result_instance_id);
+        log.debug("getPatientSetSize(): result_instance_id = " + result_instance_id);
         Integer i = 0;
         Sql sql = new Sql(dataSource);
         String sqlt = """select count(*) as patcount
@@ -465,7 +465,7 @@ class I2b2HelperService {
 //        String sqlt = """select count(distinct(patient_num)) as patcount
 //						 FROM qt_patient_set_collection
 //						 WHERE result_instance_id = CAST(? AS numeric)""";
-        log.info(sqlt);
+        log.trace(sqlt);
         sql.eachRow(sqlt, [result_instance_id], { row ->
             log.trace("inrow");
             i = row.patcount;
@@ -480,7 +480,7 @@ class I2b2HelperService {
     def int getPatientSetIntersectionSize(String result_instance_id1, String result_instance_id2) {
         checkQueryResultAccess result_instance_id1, result_instance_id2
 
-        log.info("Getting patient set intersection - result_instance_id1 = "
+        log.debug("Getting patient set intersection - result_instance_id1 = "
                 + result_instance_id1 + ", result_instance_id2 = " + result_instance_id2);
         Integer i = 0;
         Sql sql = new Sql(dataSource);
@@ -512,7 +512,7 @@ class I2b2HelperService {
 //                    ON qt_patient_set.patient_num=pd.patient_num
 //		            """;
 
-        log.info(sqlt);
+        log.trace(sqlt);
         sql.eachRow(sqlt, [
                 result_instance_id1,
                 result_instance_id2
@@ -638,7 +638,7 @@ class I2b2HelperService {
     }
 
     def SortedMap<String, HashMap<String, Integer>> getConceptDistributionDataForConceptByTrial(String concept_key, String result_instance_id) throws SQLException {
-        log.info "----------------- start getConceptDistributionDataForConceptByTrial"
+        log.debug "----------------- start getConceptDistributionDataForConceptByTrial"
         checkQueryResultAccess result_instance_id
 
         def xTrialsCaseFlag = isXTrialsConcept(concept_key)
@@ -646,36 +646,36 @@ class I2b2HelperService {
 
         def SortedMap<String, HashMap<String, Integer>> results = new TreeMap<String, HashMap<String, Integer>>()
 
-        log.info "input concept_key = " + concept_key
+        log.trace "input concept_key = " + concept_key
         if (leafNodeFlag) {
             concept_key = getParentConceptKey(concept_key)
         }
-        log.info "lookup concept_key = " + concept_key
+        log.trace "lookup concept_key = " + concept_key
 
         def baseNode = conceptsResourceService.getByKey(concept_key)
-        log.info(baseNode.class.name)
+        log.trace(baseNode.class.name)
 
         def List<String> trials = trailsForResultSet(result_instance_id)
-        log.info("trials = " + trials)
+        log.trace("trials = " + trials)
 
         if (xTrialsCaseFlag) {
-            log.info("Across Trials case")
+            log.debug("Across Trials case")
             def itemProbe = conceptsResourceService.getByKey(concept_key)
             def String modifier_cd = itemProbe.modifierDimension.code
             for (String trial: trials) {
-                log.info("results for: " + trial + ", " + concept_key)
+                log.trace("results for: " + trial + ", " + concept_key)
                 results.put(trial, getAllObservationCountsForXTrailsConceptNodeWithTrail(trial, concept_key, result_instance_id))
             }
 
         } else {
-            log.info("Single study case")
+            log.debug("Single study case")
             // if not across trials; all parients in same trial/study
             def study = "Study"
             if (!trials.isEmpty()) study = trials[0]
             results.put(study,getConceptDistributionDataForConcept(concept_key, result_instance_id))
         }
 
-        log.info("results.size() = " + results.size())
+        log.trace("results.size() = " + results.size())
 
         return results
     }
@@ -827,6 +827,8 @@ class I2b2HelperService {
     def HashMap<String, Integer> getAllObservationCountsForXTrailsConceptNodeWithTrail(String trial, String concept_key, String result_instance_id)  throws SQLException {
         checkQueryResultAccess result_instance_id
 
+        log.debug "------ getAllObservationCountsForXTrailsConceptNodeWithTrail"
+
         def node = conceptsResourceService.getByKey(concept_key)
         def List<OntologyTerm> childNodes = node.children
 
@@ -835,9 +837,9 @@ class I2b2HelperService {
             modifierList.add(childNode.code)
         }
 
-        log.info "modifierList = " + modifierList
-        log.info "result_instance_id = " + result_instance_id
-        log.info "trial = " + trial
+        log.debug "modifierList = " + modifierList
+        log.debug "result_instance_id = " + result_instance_id
+        log.debug "trial = " + trial
 
         def sqlt = """
             SELECT count(subject_id) as n, modifier_cd
@@ -858,7 +860,7 @@ class I2b2HelperService {
             group by modifier_cd
         """
 
-        log.info sqlt
+        log.trace sqlt
 
         def map = [:]
         Sql sql = new Sql(dataSource)
@@ -875,15 +877,15 @@ class I2b2HelperService {
             results.put(term.name,count)
         }
 
-        log.info(results)
+        log.trace(results)
 
         return results;
     }
 
     def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node, String result_instance_id) {
-        log.info "--------  start getObservationCountForXTrailsNode"
-        log.info "---------- case: term_nade and result_instance_id"
-        log.info "tern_node.name = " + term_node.name
+        log.debug "--------  start getObservationCountForXTrailsNode"
+        log.debug "---------- case: term_node and result_instance_id"
+        log.debug "tern_node.name = " + term_node.name
         checkQueryResultAccess result_instance_id
 
         def modifierList = []
@@ -917,13 +919,13 @@ class I2b2HelperService {
             count = row[0]
         })
 
-        log.info "count = " + count
+        log.trace "count = " + count
         return count
     }
 
     def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node) {
-        log.info "-------- start getObservationCountForXTrailsNode"
-        log.info "--------------------------- case: term_nade only"
+        log.debug "-------- start getObservationCountForXTrailsNode"
+        log.debug "--------------------------- case: term_nade only"
 
         def modifierList = []
         def leafNodes = getAllXTrailsLeafNodes(term_node)
@@ -948,15 +950,15 @@ class I2b2HelperService {
                 ) as subjectList
         """
 
-		log.info "sql text ="
-		log.info sqlt
+		log.trace "sql text ="
+		log.trace sqlt
 		
         int count = 0
         sql.eachRow(sqlt, { row ->
             count = row[0]
         })
 
-        log.info "count = " + count
+        log.trace "count = " + count
         return count
     }
 
@@ -1178,9 +1180,9 @@ class I2b2HelperService {
             // Check whether the folder is valid: first find all children of the current code
             def item = conceptsResourceService.getByKey(concept_key)
 
-            log.info "----------------- this is Folder Node"
-            log.info "concept_key = " + concept_key
-            log.info item.class.name
+            log.debug "----------------- this is Folder Node"
+            log.debug "concept_key = " + concept_key
+            log.debug item.class.name
 
             if (!item.children) {
                 log.debug("Can not show data in gridview for empty node: " + concept_key)
@@ -1188,8 +1190,6 @@ class I2b2HelperService {
 
             // All children should be leaf categorical values
             if (item.children.any {
-                log.info "----------------- it's child class"
-                log.info it.class.name
 				if (xTrialsCaseFlag) {
 					return !isLeafConceptKey(it)
 				}
@@ -1199,7 +1199,7 @@ class I2b2HelperService {
                 return tablein
             }
 
-            log.info "----------------- all folder child nodes are categorical leaf nodes"
+            log.trace "----------------- all folder child nodes are categorical leaf nodes"
 
             /*add the column to the table if its not there*/
             if (tablein.getColumn("subject") == null) {
@@ -1388,8 +1388,8 @@ class I2b2HelperService {
      * */
     def HashMap<String, Integer> getPatientDemographicDataForSubset(String col, String result_instance_id) {
 
-        log.info("in getPatientDemographicDataForSubset ...")
-        log.info("args: col = " + col + ", result_instance_id = " + result_instance_id)
+        log.debug("in getPatientDemographicDataForSubset ...")
+        log.debug("args: col = " + col + ", result_instance_id = " + result_instance_id)
         checkQueryResultAccess result_instance_id
 
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
@@ -1413,7 +1413,7 @@ class I2b2HelperService {
 //		Group by UPPER(""" + col + """)) b
 //		ON a.cat=b.cat ORDER BY a.cat""";
 
-        log.info(sqlt)
+        log.trace(sqlt)
 
         sql.eachRow(sqlt, [result_instance_id], { row ->
             if (row[1] != 0) {
@@ -5375,7 +5375,7 @@ class I2b2HelperService {
      * for display in a distribution histogram for a given subset
      */
     def getConceptDistributionDataForValueConceptByTrial(String concept_key, String result_instance_id) {
-        log.info "----------------- getConceptDistributionDataForValueConceptByTrial"
+        log.debug "----------------- getConceptDistributionDataForValueConceptByTrial"
 
         checkQueryResultAccess result_instance_id
         log.trace "access assured"
@@ -5386,7 +5386,7 @@ class I2b2HelperService {
         def trialdata = [:];
 
         if (result_instance_id != null && result_instance_id != "") {
-            log.info("Getting concept distribution data for value concept:" + concept_key);
+            log.debug("Getting concept distribution data for value concept:" + concept_key);
             log.trace "concept_key = " + concept_key
             log.trace "result_instance_id = " + result_instance_id
 
@@ -5397,8 +5397,8 @@ class I2b2HelperService {
                 def itemProbe = conceptsResourceService.getByKey(concept_key)
                 String modifier_cd = itemProbe.modifierDimension.code
 
-                log.info "modifier_cd = " + modifier_cd
-                log.info "result_instance_id = " + result_instance_id
+                log.debug "modifier_cd = " + modifier_cd
+                log.debug "result_instance_id = " + result_instance_id
 
                 String sqlt = """
                     SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f
@@ -6216,7 +6216,7 @@ class I2b2HelperService {
             WHERE psc.result_instance_id = ?
             ORDER BY trial
             """
-        log.info(sqlt)
+        log.trace(sqlt)
         sql.eachRow(sqlt, [result_instance_id], {row ->
             trails.add(row.trial)
         })
