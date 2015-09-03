@@ -1,9 +1,11 @@
 import command.UserGroupCommand
 import grails.converters.JSON
+import grails.transaction.Transactional
 import grails.validation.ValidationException
 import org.transmart.searchapp.AccessLog
 import org.transmart.searchapp.AuthUser
 import org.transmart.searchapp.Principal
+import org.transmart.searchapp.SecureObjectAccess
 import org.transmart.searchapp.UserGroup
 
 class UserGroupController {
@@ -39,9 +41,12 @@ class UserGroupController {
         }
     }
 
-    def delete = {
+    @Transactional
+    def delete() {
         def userGroupInstance = UserGroup.get(params.id)
         if (userGroupInstance) {
+            def accessList = SecureObjectAccess.findAllByPrincipal(userGroupInstance)
+            accessList.each { it.delete(flush: true) }
             userGroupInstance.delete()
             flash.message = "UserGroup ${params.id} deleted"
             redirect(action: "list")
@@ -225,18 +230,13 @@ class UserGroupController {
     def removeUsersFromUserGroup =
             {
                 UserGroupCommand fl ->
-                    def userGroupInstance = UserGroup.get(params.id)
-                    if (!fl.hasErrors()) {
-                        println("no errors")
-                    }
                     fl.errors.allErrors.each {
-                        println it
+                        log.error(it)
                     }
-                    fl.userstoremove.collect { println("collecting:" + it.toLong()) };
-                    def usersToRemove = AuthUser.findAll("from AuthUser r where r.id in (:p)", [p: fl.userstoremove.collect {
-                        it.toLong()
-                    }]);
-                    if (userGroupInstance) {
+                    def userGroupInstance = UserGroup.get(params.id)
+                    def usersToRemoveIds = fl.userstoremove?.collect { it.toLong() }
+                    if (userGroupInstance && usersToRemoveIds) {
+                        def usersToRemove = AuthUser.findAll("from AuthUser r where r.id in (:p)", [p: usersToRemoveIds]);
                         if (params.version) {
                             def version = params.version.toLong()
                             if (userGroupInstance.version > version) {
@@ -256,7 +256,6 @@ class UserGroupController {
                             render(template: 'addremove', model: [userGroupInstance: userGroupInstance, usersToAdd: searchForUsersNotInGroup(params.id.toLong(), fl.searchtext)])
                         }
                     } else {
-                        flash.message = "UserGroup not found with id ${params.id}"
                         render(template: 'addremove', model: [userGroupInstance: userGroupInstance, usersToAdd: searchForUsersNotInGroup(params.id.toLong(), fl.searchtext)])
                     }
             }

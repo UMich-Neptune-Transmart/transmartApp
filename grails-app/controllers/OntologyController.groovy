@@ -1,9 +1,19 @@
 import annotation.AmTagItem
+import annotation.AmTagTemplate
+import fm.FmFolder
 import fm.FmFolderAssociation
 import grails.converters.JSON
-import i2b2.OntNode
 import org.transmart.biomart.Experiment
 import org.transmart.searchapp.AuthUser
+import org.transmartproject.core.dataquery.highdim.HighDimensionResource
+import org.transmartproject.core.dataquery.highdim.Platform
+import org.transmartproject.core.dataquery.highdim.assayconstraints.AssayConstraint
+import org.transmartproject.core.ontology.ConceptsResource
+import org.transmartproject.core.ontology.OntologyTerm
+import org.transmartproject.core.ontology.OntologyTermTagsResource
+import org.transmartproject.core.ontology.Study
+
+import static org.transmartproject.core.ontology.OntologyTerm.VisualAttributes.HIGH_DIMENSIONAL
 
 class OntologyController {
 
@@ -13,6 +23,9 @@ class OntologyController {
     def ontologyService
     def amTagTemplateService
     def amTagItemService
+    ConceptsResource conceptsResourceService
+    OntologyTermTagsResource ontologyTermTagsResourceService
+    HighDimensionResource highDimensionResourceService
 
     def showOntTagFilter = {
         def tagtypesc = []
@@ -70,39 +83,56 @@ class OntologyController {
                 log.trace(access as JSON)
             }
 
-    def showConceptDefinition =
-            {
-                def node = OntNode.get(params.conceptKey);
+    def showConceptDefinition = {
+        def model = [:]
 
-                //Disabled check for trial - show all study metadata in the same way as the Browse view
-                //def testtag=new i2b2.OntNodeTag(tag:'test', tagtype:'testtype');
-                //node.addToTags(testtag);
-                //node.save();
-//		def trial=node.tags.find{ w -> w.tagtype =="Trial" }
-//		if(trial!=null)
-//		{
-//			def trialid=trial.tag;
-//			chain(controller:'trial', action:'trialDetailByTrialNumber', id:trialid)
-//		}
-                //Check for study by visual attributes
-                if (node.visualattributes.contains("S")) {
-                    def accession = node.sourcesystemcd
-                    def study = Experiment.findByAccession(accession?.toUpperCase())
-                    def folder
-                    if (study) {
-                        folder = FmFolderAssociation.findByObjectUid(study.getUniqueId().uniqueId)?.fmFolder
-                    } else {
-                        render(status: 200, text: "No study definition found for accession: " + accession)
-                        return
-                    }
+        OntologyTerm term = conceptsResourceService.getByKey(params.conceptKey)
 
-                    def amTagTemplate = amTagTemplateService.getTemplate(folder.getUniqueId())
-                    List<AmTagItem> metaDataTagItems = amTagItemService.getDisplayItems(amTagTemplate.id)
+        //high dimensional information
+        if (term.visualAttributes.contains(HIGH_DIMENSIONAL)) {
+            def dataTypeConstraint = highDimensionResourceService.createAssayConstraint(
+                    AssayConstraint.ONTOLOGY_TERM_CONSTRAINT,
+                    concept_key: term.key)
 
-                    render(template: 'showStudy', model: [folder: folder, bioDataObject: study, metaDataTagItems: metaDataTagItems])
-                } else {
-                    render(template: 'showDefinition', model: [tags: node.tags])
-                }
-            }
+            model.subResourcesAssayMultiMap = highDimensionResourceService
+                    .getSubResourcesAssayMultiMap([dataTypeConstraint])
+        }
+
+        //browse tab tags
+        model.browseStudyInfo = getBrowseStudyInfo(term)
+
+        //ontology term tags
+        def tagsMap = ontologyTermTagsResourceService.getTags([ term ] as Set, false)
+        model.tags = tagsMap?.get(term)
+
+        render template: 'showDefinition', model: model
+    }
+
+    private def getBrowseStudyInfo = { OntologyTerm term ->
+        Study study = term.study
+        if (study?.ontologyTerm != term) {
+            return [:]
+        }
+
+        Experiment experiment = Experiment.findByAccession(study.id.toUpperCase())
+        if (!experiment) {
+            log.debug("No experiment entry found for ${study.id} study.")
+            return [:]
+        }
+
+        FmFolder folder = FmFolderAssociation.findByObjectUid(experiment.uniqueId?.uniqueId)?.fmFolder
+        if (!folder) {
+            log.debug("No fm folder found for ${study.id} study.")
+            return [:]
+        }
+
+        AmTagTemplate amTagTemplate = amTagTemplateService.getTemplate(folder.uniqueId)
+        List<AmTagItem> metaDataTagItems = amTagItemService.getDisplayItems(amTagTemplate?.id)
+        [
+                folder          : folder,
+                bioDataObject   : experiment,
+                metaDataTagItems: metaDataTagItems
+        ]
+    }
 
 }

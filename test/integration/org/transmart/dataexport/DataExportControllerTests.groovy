@@ -90,11 +90,13 @@ class DataExportControllerTests {
                 contains(allOf(
                         hasEntry('dataTypeId', 'CLINICAL'),
                         hasEntry('isHighDimensional', false),
-                        hasEntry(is('subset1'), contains(allOf(
-                                hasEntry('fileType', '.TXT'),
-                                hasEntry('dataFormat', 'Data'),
-                                hasEntry(is('fileDataCount'), greaterThanOrEqualTo(3)),
-                        ))))))
+                        hasEntry(equalTo('subset1'), allOf(
+                                hasEntry(equalTo('exporters'), contains(allOf(
+                                        hasEntry('format', 'TSV'),
+                                        hasEntry('description', 'Tab separated file.'),
+                                ))),
+                                hasEntry(equalTo('patientsNumber'), equalTo(3)),
+                        )))))
     }
 
     @Test
@@ -108,8 +110,8 @@ class DataExportControllerTests {
             }
         }
 
-        assertThat exception.message, containsString(
-                "user_${user.id} has no EXPORT permission on study STUDY_ID_2")
+        assertThat exception.message, startsWith(
+                "User user_${user.id} has no EXPORT permission on one of the result set")
     }
 
     @Test
@@ -142,8 +144,8 @@ class DataExportControllerTests {
             createNewJob accessLevelTestData.users[4]
         }
 
-        assertThat exception.message, containsString(
-                "has no EXPORT permission on study STUDY_ID_2")
+        assertThat exception.message, startsWith(
+                "User ${accessLevelTestData.users[4].username} has no EXPORT permission on one of the result set")
     }
 
     @Test
