@@ -17,6 +17,7 @@ public class ExportColumn {
     private String label;
     private String pattern;
     private String type;
+    private String tooltip;
     private Integer width;
 
     public ExportColumn(String id, String label, String pattern, String type) {
@@ -24,6 +25,7 @@ public class ExportColumn {
         this.label = label;
         this.pattern = pattern;
         this.type = type;
+        this.tooltip = label;
         this.width = -1;
     }
 
@@ -32,6 +34,7 @@ public class ExportColumn {
         this.label = label;
         this.pattern = pattern;
         this.type = type;
+        this.tooltip = tooltip;
         this.width = width;
     }
 
@@ -39,6 +42,11 @@ public class ExportColumn {
         JSONObject json = new JSONObject();
         json.put("name", id);
         json.put("header", label);
+        json.put("tooltip", tooltip);
+        if (type != null && type.toLowerCase() == "number")
+            json.put("type", "float");
+        else
+            json.put("type", "string");
         json.put("sortable", true);
         json.put("width", 50);
         return json;

@@ -1085,9 +1085,15 @@ class I2b2HelperService {
                 newrow.put("SAMPLE_CDS", cds ? cds : "")
                 newrow.put("subset", subset);
                 newrow.put("TRIAL", row.TRIAL)
-                newrow.put("SEX_CD", row.SEX_CD ? (row.SEX_CD.toLowerCase().equals("m") || row.SEX_CD.toLowerCase().equals("male") ? "male" : (row.SEX_CD.toLowerCase().equals("f") || row.SEX_CD.toLowerCase().equals("female") ? "female" : "NULL")) : "NULL")
-                newrow.put("AGE_IN_YEARS_NUM", row.SEX_CD ? (row.AGE_IN_YEARS_NUM.toString().equals("0") ? "NULL" : row.AGE_IN_YEARS_NUM.toString()) : "NULL")
-                newrow.put("RACE_CD", row.RACE_CD ? (row.RACE_CD.toLowerCase().equals("unknown") ? "NULL" : row.RACE_CD.toLowerCase()) : "NULL")
+                if (row.SEX_CD!=null && row.SEX_CD!="") {
+                    newrow.put("SEX_CD", row.SEX_CD.toLowerCase().equals("m") || row.SEX_CD.toLowerCase().equals("male") ? "male" : (row.SEX_CD.toLowerCase().equals("f") || row.SEX_CD.toLowerCase().equals("female") ? "female" : "NULL") )
+                }
+                if (row.AGE_IN_YEARS_NUM!=null) {
+                    newrow.put("AGE_IN_YEARS_NUM", row.AGE_IN_YEARS_NUM.toString())
+                }
+                if (row.RACE_CD!=null && row.RACE_CD!="") {
+                    newrow.put("RACE_CD", row.RACE_CD.toLowerCase())
+                }
                 tablein.putRow(subject, newrow);
             }
         })
@@ -1156,23 +1162,98 @@ class I2b2HelperService {
             if (tablein.getColumn("subject") == null) {
                 tablein.putColumn("subject", new ExportColumn("subject", "Subject", "", "string"));
             }
-            if (tablein.getColumn(columnid) == null) {
-                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "number"));
-            }
+
             def valueLeafNodeFlag = isValueConceptKey(concept_key)
 
             if (xTrialsCaseFlag) {
                 insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein)
             }
             else {
-                insertConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein)
+                insertConceptDataIntoTable(columnid, concept_key, result_instance_id, valueLeafNodeFlag, tablein)
+
+            }
+
+            if (isValueConceptKey(concept_key)) {
+
+                if (tablein.getColumn(columnid) == null) {
+                    tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "number", columntooltip));
+                }
+
+                /*get the data*/
+                String concept_cd = getConceptCodeFromKey(concept_key);
+                Sql sql = new Sql(dataSource)
+                String sqlt = """SELECT PATIENT_NUM, NVAL_NUM, START_DATE FROM OBSERVATION_FACT f WHERE CONCEPT_CD = ? AND
+				        PATIENT_NUM IN (select distinct patient_num
+						from qt_patient_set_collection
+						where result_instance_id = ?)""";
+
+                sql.eachRow(sqlt, [
+                        concept_cd,
+                        result_instance_id
+                ], { row ->
+                    /*If I already have this subject mark it in the subset column as belonging to both subsets*/
+                    String subject = row.PATIENT_NUM
+                    Double value = row.NVAL_NUM
+                    if (tablein.containsRow(subject)) /*should contain all subjects already if I ran the demographics first*/ {
+                        tablein.getRow(subject).put(columnid, value.toString());
+                    } else
+                    /*fill the row*/ {
+                        ExportRowNew newrow = new ExportRowNew();
+                        newrow.put("subject", subject);
+                        newrow.put(columnid, value.toString());
+                        tablein.putRow(subject, newrow);
+                    }
+                })
+            } else {
+
+                if (tablein.getColumn(columnid) == null) {
+                    tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "string", columntooltip));
+                }
+
+                String concept_cd = getConceptCodeFromKey(concept_key);
+                Sql sql = new Sql(dataSource)
+                String sqlt = """SELECT PATIENT_NUM, TVAL_CHAR, START_DATE FROM OBSERVATION_FACT f WHERE CONCEPT_CD = ? AND
+				        PATIENT_NUM IN (select distinct patient_num
+				        from qt_patient_set_collection
+						where result_instance_id = ?)""";
+
+                sql.eachRow(sqlt, [
+                        concept_cd,
+                        result_instance_id
+                ], { row ->
+                    /*If I already have this subject mark it in the subset column as belonging to both subsets*/
+                    String subject = row.PATIENT_NUM
+                    String value = row.TVAL_CHAR
+                    if (value == null) {
+                        value = "Y";
+                    }
+                    if (isURL(value)) {
+                        /* Embed URL in a HTML Link */
+                        value = "<a href=\"" + value + "\" target=\"_blank\">" + value + "</a>";
+                    }                    
+                    if (tablein.containsRow(subject)) /*should contain all subjects already if I ran the demographics first*/ {
+                        tablein.getRow(subject).put(columnid, value.toString());
+                    } else
+                        /*fill the row*/ {
+                        ExportRowNew newrow = new ExportRowNew();
+                        newrow.put("subject", subject);
+                        newrow.put(columnid, value.toString());
+                        tablein.putRow(subject, newrow);
+                    }
+                });
             }
             //pad all the empty values for this column
-            for (ExportRowNew row : tablein.getRows()) {
-                if (!row.containsColumn(columnid)) {
-                    row.put(columnid, "NULL");
-                }
-            }
+            /* Padding empty values introduces confusion with the user.
+             * It is not really clear anymore whether there was no observation done or whether "NULL" has been observed.
+             * Leaving a grid cell empty when no observation exists, is a more explicit representation of the status.
+             */
+            /*
+             * for (ExportRowNew row : tablein.getRows()) {
+             *     if (!row.containsColumn(columnid)) {
+             *         row.put(columnid, "NULL");
+             *     }
+             * }
+             */
         } else {
             // If a folder is dragged in, we want the contents of the folder to be added to the data
             // That is possible if the folder contains only categorical values and no subfolders.
@@ -1251,11 +1332,16 @@ class I2b2HelperService {
             }
 
             //pad all the empty values for this column
-            for (ExportRowNew row : tablein.getRows()) {
-                if (!row.containsColumn(columnid)) {
-                    row.put(columnid, "N");
-                }
-            }
+            /* Padding empty values introduces confusion with the user.
+             * It is not really clear anymore whether there was no observation done or whether "N" has been observed.
+             * Leaving a grid cell empty when no observation exists, is a more explicit representation of the status.
+             */
+            /* for (ExportRowNew row : tablein.getRows()) {
+             *     if (!row.containsColumn(columnid)) {
+             *         row.put(columnid, "N");
+             *     }
+             * }
+             */
         }
         log.debug "----------------- end addConceptDataToTable"
         return tablein;
