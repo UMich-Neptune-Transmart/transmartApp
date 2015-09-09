@@ -23,7 +23,7 @@
                      style="height:35px;vertical-align:middle;margin-bottom: 12px;">
             </g:if>
             <g:if test="${projectName && providerName}">
-                <span style="font-size:20px;display: inline-block;line-height: 35px; height: 35px;">&nbsp;+&nbsp;</span>
+                <span style="font-size:20px;display: inline-block;line-height: 35px; height: 35px;">&nbsp;&nbsp;</span>
             </g:if>
             <g:if test="${providerName}">
                 <a id="providerpowered" target="_blank" href="${grailsApplication.config?.com?.recomdata?.providerURL}"

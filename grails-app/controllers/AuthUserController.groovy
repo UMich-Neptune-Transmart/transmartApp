@@ -1,3 +1,4 @@
+import grails.plugin.springsecurity.SpringSecurityService
 import org.codehaus.groovy.grails.exceptions.InvalidPropertyException
 import org.springframework.transaction.TransactionStatus
 import org.transmart.searchapp.*
@@ -61,7 +62,7 @@ class AuthUserController {
                 log.info("Deleting ${person.username} from the roles")
                 Role.findAll().each { it.removeFromPeople(person) }
                 log.info("Deleting ${person.username} from secure access list")
-                AuthUserSecureAccess.findAllByAuthUser(person).each { it.delete() }
+                SecureObjectAccess.findAllByPrincipal(Principal.findById(person.id)).each { it.delete() };
                 log.info("Deleting the gene signatures created by ${person.username}")
                 try {
                     GeneSignature.findAllByCreatedByAuthUser(person).each { it.delete() }

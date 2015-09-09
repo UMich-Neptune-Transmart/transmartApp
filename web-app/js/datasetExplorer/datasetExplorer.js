@@ -141,166 +141,187 @@ Ext.onReady(function () {
         ]
     });
 
-    advmenu = new Ext.menu.Menu({
-        id: 'advancedMenu',
-        minWidth: 250,
-        items: [
-            {
-                text: 'Heatmap',
-                // when checked has a boolean value, it is assumed to be a CheckItem
-                handler: function () {
-                    GLOBAL.HeatmapType = 'Compare';
-                    validateHeatmap();
-                    advancedWorkflowContextHelpId = "1085";
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            {
-                text: 'Hierarchical Clustering',
-                // when checked has a boolean value, it is assumed to be a CheckItem
-                handler: function () {
-                    GLOBAL.HeatmapType = 'Cluster';
-                    validateHeatmap();
-                    advancedWorkflowContextHelpId = "1085";
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            {
-                text: 'K-Means Clustering',
-                // when checked has a boolean value, it is assumed to be a CheckItem
-                handler: function () {
-                    GLOBAL.HeatmapType = 'KMeans';
-                    validateHeatmap();
-                    advancedWorkflowContextHelpId = "1085";
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            {
-                text: 'Comparative Marker Selection (Heatmap)',
-                // when checked has a boolean value, it is assumed to be a CheckItem
-                handler: function () {
-                    GLOBAL.HeatmapType = 'Select';
-                    validateHeatmap();
-                    advancedWorkflowContextHelpId = "1085";
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            '-',                            
-            {
-                text: 'Principal Component Analysis',
-                // when checked has a boolean value, it is assumed to be a CheckItem
-                handler: function () {
-                    GLOBAL.HeatmapType = 'PCA';
-                    validateHeatmap();
-                    advancedWorkflowContextHelpId = "1172";
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            '-',
-            {
-                text: 'Survival Analysis',
-                handler: function () {
-                    if (isSubsetEmpty(1) || isSubsetEmpty(2)) {
-                        alert('Survival Analysis needs time point data from both subsets.');
-                        return;
-                    } else {
-                        showSurvivalAnalysis();
+		advmenu = new Ext.menu.Menu(
+				{
+					id : 'advancedMenu',
+					minWidth: 250,
+					items : [
+					         {
+					        	 text : 'Heatmap',
+					        	 disabled : true,
+					        	 // when checked has a boolean value, it is assumed to be a CheckItem
+                        handler: function () {
+					        	 	GLOBAL.HeatmapType = 'Compare';
+					        	 	validateHeatmap();
+					        	 	advancedWorkflowContextHelpId="1085";
+					        	 },
+					        	 disabled : GLOBAL.GPURL == "" 
+					         }
+					         ,
+					         {
+					        	 text : 'Hierarchical Clustering',
+					        	 disabled : true,
+					        	 // when checked has a boolean value, it is assumed to be a CheckItem
+                        handler: function () {
+					        	 	GLOBAL.HeatmapType = 'Cluster';
+					        	 	validateHeatmap();
+					        	 	advancedWorkflowContextHelpId="1085";
+					        	 },
+					        	 disabled : GLOBAL.GPURL == ""
+					         }
+					         ,
+					         {
+					        	 text : 'K-Means Clustering',
+					        	 disabled : true,
+					        	 // when checked has a boolean value, it is assumed to be a CheckItem
+                        handler: function () {
+					        	 	GLOBAL.HeatmapType = 'KMeans';
+					        	 	validateHeatmap();
+					        	 	advancedWorkflowContextHelpId="1085";
+					        	 },
+					        	 disabled : GLOBAL.GPURL == ""
+					         }
+					         ,
+					         {
+					        	 text : 'Comparative Marker Selection (Heatmap)',
+					        	 disabled : true,
+					        	 // when checked has a boolean value, it is assumed to be a CheckItem
+                        handler: function () {
+					        	 	GLOBAL.HeatmapType = 'Select';
+					        	 	validateHeatmap();
+					        	 	advancedWorkflowContextHelpId="1085";
+					        	 },
+					        	 disabled : GLOBAL.GPURL == ""
+					         }
+					         ,
+				        	 '-' 
+					         ,					         
+					         {
+					        	 text : 'Principal Component Analysis',
+					        	 disabled : true,
+					        	 // when checked has a boolean value, it is assumed to be a CheckItem
+                        handler: function () {
+					        	 	GLOBAL.HeatmapType = 'PCA';
+					        	 	validateHeatmap();
+					        	 	advancedWorkflowContextHelpId="1172";
+					        	 },
+					        	 disabled : GLOBAL.GPURL == ""
+					         }
+					         ,
+				        	 '-'
+				        	 ,
+					         {
+					        	 text : 'Survival Analysis',
+                        handler: function () {
+                            if (isSubsetEmpty(1) || isSubsetEmpty(2)) {
+					        			alert('Survival Analysis needs time point data from both subsets.');
+					        		 	return;
+					        	 	}
+					        	 	else {
+					        	 		showSurvivalAnalysis();
+					        	 	}
+					        	 },
+					        	 disabled : GLOBAL.GPURL == ""
+					         }
+					         ,
+				        	 '-'
+				        	 ,
+					         {
+					        	 text : 'Haploview',
+					        	 handler : function()	{
+                            if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
+					        			alert('Empty subsets found, need a valid subset to analyze!');
+					        		 	return;
+					        	 	}
+                            if ((GLOBAL.CurrentSubsetIDs[1] == null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] == null && !isSubsetEmpty(2))) {
+					        			runAllQueries(function()	{
+					        				showHaploviewGeneSelection();
+					        			});
+					        	 	} else	{
+					        	 		showHaploviewGeneSelection()
+					        	 	}
+					        	 	return;
+					        	}
+					        }
+					        ,
+					        {
+					        	 text : 'SNPViewer',
+					        	 disabled : true,
+					        	 handler : function()	{
+                            if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
+					        			alert('Both dataset is empty. Please choose a valid dataset.');
+					        		 	return;
+					        	 	}
+                            if ((GLOBAL.CurrentSubsetIDs[1] == null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] == null && !isSubsetEmpty(2))) {
+					        			runAllQueries(function()	{
+					        				showSNPViewerSelection();
+					        			});
+					        	 	} else	{
+					        	 		showSNPViewerSelection();
+					        	 	}
+					        	 	return;
+					        	},
+					        	disabled : GLOBAL.GPURL == ""
+					        }
+					        ,
+					        {
+					        	 text : 'Integrative Genome Viewer',
+					        	 disabled : true,
+					        	 handler : function()	{
+                            if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
+					        			alert('Both dataset is empty. Please choose a valid dataset.');
+					        		 	return;
+					        	 	}
+                            if ((GLOBAL.CurrentSubsetIDs[1] == null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] == null && !isSubsetEmpty(2))) {
+					        			runAllQueries(function()	{
+					        				showIgvSelection();
+					        			});
+					        	 	} else	{
+					        	 		showIgvSelection();
+					        	 	}
+					        	 	return;
+					        	},
+					        	disabled : GLOBAL.GPURL == ""
+					        }
+					        ,
+					        {
+					        	 text : 'PLINK',
+					        	 disabled : true,
+					        	 handler : function()	{
+                            if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
+					        			alert('Both dataset is empty. Please choose a valid dataset.');
+					        		 	return;
+					        	 	}
+                            if ((GLOBAL.CurrentSubsetIDs[1] == null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] == null && !isSubsetEmpty(2))) {
+					        			runAllQueries(function()	{
+					        				showPlinkSelection();
+					        			});
+					        	 	} else	{
+					        	 		showPlinkSelection();
+					        	 	}
+					        	 	return;
+					        	}
+					        },
+					        {
+					        	 text : 'Genome-Wide Association Study',
+					        	 handler : function()	{
+                            if (isSubsetEmpty(1) || isSubsetEmpty(2)) {
+					        			alert('Genome-Wide Association Study needs control datasets (normal patients) in subset 1, and case datasets (disease patients) in subset 2.');
+					        		 	return;
+					        	 	}
+                            if ((GLOBAL.CurrentSubsetIDs[1] == null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] == null && !isSubsetEmpty(2))) {
+					        			runAllQueries(function()	{
+					        				showGwasSelection();
+					        			});
+					        	 	} else	{
+					        	 		showGwasSelection();
+					        	 	}
+					        	 	return;
+					        	}
                     }
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            '-',
-            {
-                text: 'Haploview',
-                handler: function() {
-                    if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
-                        alert('Empty subsets found, need a valid subset to analyze!');
-                        return;
-                    }
-                    if ((GLOBAL.CurrentSubsetIDs[1] === null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] === null && !isSubsetEmpty(2))) {
-                        runAllQueries(function() {
-                            showHaploviewGeneSelection();
-                        });
-                    } else {
-                        showHaploviewGeneSelection();
-                    }
-                    return;
-                }
-            },
-            {
-                text: 'SNPViewer',
-                handler: function() {
-                    if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
-                        alert('Both dataset is empty. Please choose a valid dataset.');
-                        return;
-                    }
-                    if ((GLOBAL.CurrentSubsetIDs[1] === null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] === null && !isSubsetEmpty(2))) {
-                        runAllQueries(function() {
-                            showSNPViewerSelection();
-                        });
-                    } else {
-                        showSNPViewerSelection();
-                    }
-                    return;
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            {
-                text: 'Integrative Genome Viewer',
-                handler: function() {
-                    if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
-                        alert('Both dataset is empty. Please choose a valid dataset.');
-                        return;
-                    }
-                    if ((GLOBAL.CurrentSubsetIDs[1] === null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] === null && !isSubsetEmpty(2))) {
-                        runAllQueries(function()    {
-                            showIgvSelection();
-                        });
-                    } else {
-                        showIgvSelection();
-                    }
-                    return;
-                },
-                disabled: GLOBAL.GPURL === ""
-            },
-            {
-                text: 'PLINK',
-                disabled: true,
-                handler: function() {
-                    if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
-                        alert('Both dataset is empty. Please choose a valid dataset.');
-                        return;
-                    
-                    }
-                    if ((GLOBAL.CurrentSubsetIDs[1] === null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] === null && !isSubsetEmpty(2))) {
-                        runAllQueries(function()    {
-                            showPlinkSelection();
-                        });
-                    } else {
-                        showPlinkSelection();
-                    }
-                    return;
-                }
-            },
-            {
-                text: 'Genome-Wide Association Study',
-                handler: function() {
-                    if (isSubsetEmpty(1) || isSubsetEmpty(2)) {
-                        alert('Genome-Wide Association Study needs control datasets (normal patients) in subset 1, and case datasets (disease patients) in subset 2.');
-                        return;
-                    }
-                    if ((GLOBAL.CurrentSubsetIDs[1] === null && !isSubsetEmpty(1)) || (GLOBAL.CurrentSubsetIDs[2] === null && !isSubsetEmpty(2))) {
-                        runAllQueries(function()    {
-                            showGwasSelection();
-                        });
-                    } else  {
-                        showGwasSelection();
-                    }
-                    return;
-                }
-            }
-        ]
-    });
+                ]
+				}
+		);
 
     var tb2 = new Ext.Toolbar({
         id: 'maintoolbar',
@@ -339,46 +360,47 @@ Ext.onReady(function () {
     // Comparison tab
     // **************
 
-    queryPanel = new Ext.Panel({
-        id: 'queryPanel',
-        title: 'Comparison',
-        region: 'north',
-        height: 340,
-        autoScroll: true,
-        split: true,                    
-        autoLoad: {
-            url: pageInfo.basePath+'/panels/subsetPanel.html',
-            scripts: true,
-            nocache: true,
-            discardUrl: true,
-            method: 'POST'
-        },
-        collapsible: true,
-        titleCollapse: false,
-        animCollapse: false,
-        listeners: {
-            activate: function() {
-                GLOBAL.Analysis="Advanced";
-            }
-        },
-        bbar: new Ext.StatusBar({
-            // Status bar to show the progress of generating heatmap and other advanced workflows
-            id: 'asyncjob-statusbar',
-            defaultText: 'Ready',
-            defaultIconCls: 'default-icon',
-            text: 'Ready',
-            statusAlign: 'right',
-            iconCls: 'ready-icon',
-            items: [
-                {
-                    xtype: 'button',
-                    id: 'cancjob-button',
-                    text: 'Cancel',
-                    hidden: true
-                }
-            ]
-        })
-    });
+		queryPanel = new Ext.Panel(
+				{
+					id : 'queryPanel',
+					title : 'Comparison',
+					region : 'north',
+					height : 340,
+					autoScroll : true,
+					split : true,					
+            autoLoad: {
+						url : pageInfo.basePath+'/panels/subsetPanel.html',
+						scripts : true,
+						nocache : true,
+						discardUrl : true,
+						method : 'POST'
+					},
+					collapsible : true,
+					titleCollapse : false,
+					animCollapse : false,
+            listeners: {
+						activate : function() {
+							GLOBAL.Analysis="Advanced";
+						}
+					},
+					bbar: new Ext.StatusBar({
+						// Status bar to show the progress of generating heatmap and other advanced workflows
+				        id: 'asyncjob-statusbar',
+				        defaultText: 'Ready',
+				        defaultIconCls: 'default-icon',
+				        text: 'Ready',
+				        statusAlign: 'right',
+				        iconCls: 'ready-icon',
+                items: [
+                    {
+				        	xtype: 'button',
+				        	id: 'cancjob-button',
+				        	text: 'Cancel',
+				        	hidden: true
+                    }
+                ]
+				    })
+        });
 
     resultsPanel = new Ext.Panel({
         id: 'resultsPanel',
@@ -510,102 +532,110 @@ Ext.onReady(function () {
     // Data Exports
     // ************
 
-    analysisDataExportPanel = new Ext.Panel({
-        id: 'analysisDataExportPanel',
-        title: 'Data Export',
-        region: 'center',
-        split: true,
-        height: 90,
-        layout: 'fit',
-        listeners: {
-            activate: function(p) {
-                if (isSubsetQueriesChanged(p.subsetQueries) || !Ext.get('dataTypesGridPanel')) {
-                    p.body.mask("Loading...", 'x-mask-loading');
-                    runAllQueries(getDatadata, p);
-                    return;
-                }
-            },
-            'afterLayout': {
-                fn: function (el) {
-                    onWindowResize();
-                }
-            }
-        },
-        collapsible: true                       
-    });
-    
-    // ******************
-    // Advanced Workflow
-    // ******************
+	if (dataExportEnabled) {
+		analysisDataExportPanel = new Ext.Panel(
+				{
+					id : 'analysisDataExportPanel',
+					title : 'Data Export',
+					region : 'center',
+					split : true,
+					height : 90,
+					layout : 'fit',
+                listeners: {
+						activate : function(p) {
+                        if (isSubsetQueriesChanged(p.subsetQueries) || !Ext.get('dataTypesGridPanel')) {
+							p.body.mask("Loading...", 'x-mask-loading');
+							runAllQueries(getDatadata, p);
+			        	 	return;
+                        }
+						},
+                    'afterLayout': {
+                        fn: function (el) {
+                            onWindowResize();
+                        }
+						}
+					},
+					collapsible : true						
+				}
+		);
+	}
+		
+        // ******************
+        // Advanced Workflow
+        // ******************
 
-    dataAssociationPanel = new Ext.Panel({
-        id: 'dataAssociationPanel',
-        title: 'Advanced Workflow',
-        region: 'center',
-        split: true,
-        height: 90,
-        layout: 'fit',
-        tbar: new Ext.Toolbar({
-            id: 'advancedWorkflowToolbar',
-            title: 'Advanced Workflow actions',
-            items: []
-        }),
-        autoScroll: true,
-        autoLoad: {
-            url: pageInfo.basePath+'/dataAssociation/defaultPage',
-            method: 'POST',
-            callback: setDataAssociationAvailableFlag,
-            evalScripts:true
-        },
-            listeners: {
-            activate: function (p) {
-                /**
-                 * routines when activating advanced workflow tab
-                 * @private
-                 */
-                var _activateAdvancedWorkflow = function () {
-                    activateTab();
-                    GLOBAL.Analysis="dataAssociation";
-                    renderCohortSummary();
-                    onWindowResize();
-                };
+		dataAssociationPanel = new Ext.Panel(
+				{
+					id : 'dataAssociationPanel',
+					title : 'Advanced Workflow',
+					region : 'center',
+					split : true,
+					height : 90,
+					layout : 'fit',
+					tbar : new Ext.Toolbar({
+						id : 'advancedWorkflowToolbar',
+						title : 'Advanced Workflow actions',
+						items : []
+						}),
+					autoScroll : true,
+                autoLoad: {
+			        	url : pageInfo.basePath+'/dataAssociation/defaultPage',
+			           	method:'POST',
+			           	callback: setDataAssociationAvailableFlag,
+			           	evalScripts:true
+			        },
+                listeners: {
+                    activate: function (p) {
+                        /**
+                         * routines when activating advanced workflow tab
+                         * @private
+                         */
+                        var _activateAdvancedWorkflow = function () {
+                            activateTab();
+							GLOBAL.Analysis="dataAssociation";
+							renderCohortSummary();
+                            onWindowResize();
+						}
 
-                if (isSubsetQueriesChanged(p.subsetQueries)) {
-                    runAllQueries(_activateAdvancedWorkflow, p);
-                }
+                        if (isSubsetQueriesChanged(p.subsetQueries)) {
+                            runAllQueries(_activateAdvancedWorkflow, p);
+				}
+		
+                        _activateAdvancedWorkflow();
+						},
+                    'afterLayout': {
+                        fn: function (el) {
+                            onWindowResize();
+						}
+				}
+				},
+				collapsible : true
+			}
+		);
 
-                _activateAdvancedWorkflow();
-            },
-            'afterLayout': {
-                fn: function (el) {
-                    onWindowResize();
-                }
-            }
-        },
-        collapsible: true
-    });
+        // ******************
+        // Export Jobs
+        // ******************
 
-    // ******************
-    // Export Jobs
-    // ******************
-
-    analysisExportJobsPanel = new Ext.Panel({
-        id: 'analysisExportJobsPanel',
-        title: 'Export Jobs',
-        region: 'center',
-        split: true,
-        height: 90,
-        layout: 'fit',
-        listeners: {
-            activate: function(p) {
-                p.body.mask("Loading...", 'x-mask-loading');
-                getExportJobs(p);
-            },
-            deactivate: function() {
-            }
-        },
-        collapsible: true                       
-    });
+        analysisExportJobsPanel = new Ext.Panel(
+				{
+                id: 'analysisExportJobsPanel',
+                title: 'Export Jobs',
+					region : 'center',
+					split : true,
+					height : 90,
+					layout : 'fit',
+                listeners: {
+						activate : function(p) {
+                        p.body.mask("Loading...", 'x-mask-loading');
+                        getExportJobs(p)
+						},
+						deactivate: function(){
+						}
+					},
+					collapsible : true						
+				}
+		);
 
     /**
      * panel to display list of jobs belong to a user
@@ -645,30 +675,36 @@ Ext.onReady(function () {
         collapsible: true
     });
 
-    sampleExplorerPanel = new Ext.Panel({
-        id: "sampleExplorer",
-        title:"Sample Details",
-        layout: "fit",
-        listeners: {
-            activate: function(p) {
-                p.body.mask("Loading...", 'x-mask-loading');
-                generatePatientSampleCohort(launchSampleBrowseWithCohort);
+/*  Removed from Neptune version.
+
+        sampleExplorerPanel = new Ext.Panel(
+            {
+                id: "sampleExplorer",
+                title:"Sample Details",
+                layout: "fit",
+                listeners: {
+                    activate: function(p) {
+                        p.body.mask("Loading...", 'x-mask-loading');
+                        generatePatientSampleCohort(launchSampleBrowseWithCohort)
+                    }
+                }
             }
+        )*/
+
+        resultsTabPanel.add(queryPanel);
+		resultsTabPanel.add(analysisPanel);
+        if (gridViewEnabled) {
+            resultsTabPanel.add(analysisGridPanel);
         }
-    });
-
-    resultsTabPanel.add(queryPanel);
-    resultsTabPanel.add(analysisPanel);
-    resultsTabPanel.add(analysisGridPanel);
-    resultsTabPanel.add(dataAssociationPanel);
-    resultsTabPanel.add(analysisDataExportPanel);
-    resultsTabPanel.add(analysisExportJobsPanel);
-    resultsTabPanel.add(analysisJobsPanel);
-    resultsTabPanel.add(workspacePanel);
-
-    if (GLOBAL.sampleExplorerEnabled) {
-        resultsTabPanel.add(sampleExplorerPanel);
-    }
+        resultsTabPanel.add(dataAssociationPanel);
+		if (dataExportEnabled) {
+            resultsTabPanel.add(analysisDataExportPanel);
+            resultsTabPanel.add(analysisExportJobsPanel);
+        }
+		resultsTabPanel.add(analysisJobsPanel);
+		resultsTabPanel.add(workspacePanel);
+        //Removing from Neptune version.
+        //resultsTabPanel.add(sampleExplorerPanel);
 
     function loadResources(resources, bootstrap) {
         var scripts = [];
@@ -1645,16 +1681,20 @@ function setupDragAndDrop() {
         return true;
     };
 
-    /* set up drag and drop for grid */
-    var mcd = Ext.get(analysisGridPanel.body);
-    dtg = new Ext.dd.DropTarget(mcd, {
-        ddGroup: 'makeQuery'
-    });
+    if (gridViewEnabled) {
+	/* set up drag and drop for grid */
+	var mcd = Ext.get(analysisGridPanel.body);
+	dtg = new Ext.dd.DropTarget(mcd,
+			{
+            ddGroup: 'makeQuery'
+			}
+	);
 
     dtg.notifyDrop = function (source, e, data) {
-        buildAnalysis(data.node);
-        return true;
-    };
+		buildAnalysis(data.node);
+		return true;
+	}
+    }
 }
 
 function getValue(node, defaultvalue) {
@@ -3799,7 +3839,9 @@ function ontFilterLoaded(el, success, response, options) {
 
 function clearQuery() {
     if (confirm("Are you sure you want to clear your current analysis?")) {
-        clearAnalysisPanel();
+        if (gridViewEnabled) {
+            clearAnalysisPanel();
+        }
         resetQuery();
         clearDataAssociation();
     }

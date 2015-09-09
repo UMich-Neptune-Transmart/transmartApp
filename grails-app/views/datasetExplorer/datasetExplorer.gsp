@@ -190,6 +190,9 @@
     Ext.Updater.defaults.timeout = 1800000;
 
     var helpURL = '${grailsApplication.config.com.recomdata.adminHelpURL}';
+    var gridViewEnabled = '${grailsApplication.config.com.recomdata.gridViewEnabled}';
+    var dataExportEnabled = '${grailsApplication.config.com.recomdata.dataExportEnabled}';
+
 </script>
 
 <div id="header-div"><g:render template="/layouts/commonheader" model="['app': 'datasetExplorer']"/></div>
