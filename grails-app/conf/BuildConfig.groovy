@@ -19,6 +19,7 @@ grails.project.fork = [
 
 grails.project.war.file = "target/${appName}.war"
 grails.plugin.location.'rdc-rmodules' = '../Rmodules'
+grails.plugin.location.'transmart-core' = '../transmart-core-db'
 
 /* we need at least servlet-api 2.4 because of HttpServletResponse::setCharacterEncoding */
 grails.servlet.version = "2.5"
@@ -129,7 +130,7 @@ grails.project.dependency.resolution = {
 
         if (!dm) {
             //compile ':rdc-rmodules:1.2.2'
-            runtime ':transmart-core:1.2.2'
+            //runtime ':transmart-core:1.2.2'
             compile ':transmart-gwas:1.2.2'
             //// already included in transmart-gwas
             //compile ':transmart-legacy-db:1.2.2'
