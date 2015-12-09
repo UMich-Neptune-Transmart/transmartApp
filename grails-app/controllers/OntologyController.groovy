@@ -14,6 +14,7 @@ class OntologyController {
     def ontologyService
     def amTagTemplateService
     def amTagItemService
+    def conceptsResourceService
 
     def showOntTagFilter = {
         def tagtypesc = []
@@ -75,12 +76,19 @@ class OntologyController {
             {
                 // showConceptDefinition: total bogus patch for Dec 2014 release of Neptune - Terry Weymouth, Dec 18, 2014
                 // this is not correct but it works; NOTE, also, bypassing security
-//                print(params.conceptKey)
+
+                // Per Neptune reqs, Across Trials definitions just show the tooltips - Zach Wright 12/9/2015
+                def tags = []
                 def key = params.conceptKey
-                key = key.replace("\\\\Private Studies","")
-//                print("forced key = $key")
-                def node = OntNode.get(key);
-//                print(node)
+                if (i2b2HelperService.isXTrialsConcept(key)) {
+                    def node = conceptsResourceService.getByKey(key);
+                    tags.add(new i2b2.OntNodeTag(tagtype:'Details', tag:node.modifierDimension.tooltip))
+                }
+                else {
+                    key = key.replace("\\\\Private Studies","")
+                    def node = OntNode.get(key);
+                    tags = node.tags
+                }
 
                 //Disabled check for trial - show all study metadata in the same way as the Browse view
                 //def testtag=new i2b2.OntNodeTag(tag:'test', tagtype:'testtype');
@@ -109,7 +117,7 @@ class OntologyController {
 //
 //                   render(template: 'showStudy', model: [folder: folder, bioDataObject: study, metaDataTagItems: metaDataTagItems])
 //                } else {
-                    render(template: 'showDefinition', model: [tags: node.tags])
+                    render(template: 'showDefinition', model: [tags: tags])
 //                }
             }
 
