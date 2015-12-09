@@ -82,7 +82,8 @@ class OntologyController {
                 def key = params.conceptKey
                 if (i2b2HelperService.isXTrialsConcept(key)) {
                     def node = conceptsResourceService.getByKey(key);
-                    tags.add(new i2b2.OntNodeTag(tagtype:'Details', tag:node.modifierDimension.tooltip))
+                    if (node.modifierDimension.tooltip != null)
+                        tags.add(new i2b2.OntNodeTag(tagtype:'Details', tag:node.modifierDimension.tooltip))
                 }
                 else {
                     key = key.replace("\\\\Private Studies","")
