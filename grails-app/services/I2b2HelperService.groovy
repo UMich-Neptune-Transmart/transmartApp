@@ -1139,6 +1139,20 @@ class I2b2HelperService {
     }
 
     /**
+     * Checks if a string represents a URL
+     */
+    Boolean isURL(String s) {
+        Boolean isurl
+        // Attempt to convert string into an URL.
+        try {
+            URL url = new URL(s)
+            isurl = true
+        } catch (MalformedURLException e) {
+            isurl = false
+        }
+    }
+
+    /**
      * Adds a column of data to the grid export table
      */
     def ExportTableNew addConceptDataToTable(ExportTableNew tablein, String concept_key, String result_instance_id) {
@@ -1236,6 +1250,7 @@ class I2b2HelperService {
                     /*If I already have this subject mark it in the subset column as belonging to both subsets*/
                     String subject = row.PATIENT_NUM
                     String value = row.TVAL_CHAR
+
                     if (value == null) {
                         value = "Y";
                     }
