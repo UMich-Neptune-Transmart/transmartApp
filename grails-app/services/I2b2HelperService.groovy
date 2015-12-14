@@ -1195,10 +1195,6 @@ class I2b2HelperService {
                 insertConceptDataIntoTable(columnid, concept_key, result_instance_id, valueLeafNodeFlag, tablein)
             }
 
-            if (tablein.getColumn(columnid) == null) {
-                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "number", columntooltip));
-            }
-
             if (isValueConceptKey(concept_key)) {
 
                 if (tablein.getColumn(columnid) == null) {
@@ -1250,6 +1246,8 @@ class I2b2HelperService {
                     /*If I already have this subject mark it in the subset column as belonging to both subsets*/
                     String subject = row.PATIENT_NUM
                     String value = row.TVAL_CHAR
+                    println("-------> " + row.TVAL_CHAR)
+                    println("------->>" + value.toString())
 
                     if (value == null) {
                         value = "Y";
