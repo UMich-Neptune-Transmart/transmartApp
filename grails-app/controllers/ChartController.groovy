@@ -261,7 +261,7 @@ class ChartController {
 
         String analysis_key = i2b2HelperService.getConceptKeyForAnalysis(concept_key);
 
-        log.trace "i2b2HelperService.getConceptKeyForAnalysis(concept_key) returns " + analysis_key;
+        log.debug "i2b2HelperService.getConceptKeyForAnalysis(concept_key) returns " + analysis_key;
 
         PrintWriter pw = new PrintWriter(response.getOutputStream());
         pw.write("<html><head><link rel='stylesheet' type='text/css' href='${resource(dir: 'css', file: 'chartservlet.css')}'></head><body><div class='analysis'>");

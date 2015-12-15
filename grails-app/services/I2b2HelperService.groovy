@@ -646,17 +646,17 @@ class I2b2HelperService {
 
         def SortedMap<String, HashMap<String, Integer>> results = new TreeMap<String, HashMap<String, Integer>>()
 
-        log.trace "input concept_key = " + concept_key
+        log.debug "input concept_key = " + concept_key
         if (leafNodeFlag) {
             concept_key = getParentConceptKey(concept_key)
         }
-        log.trace "lookup concept_key = " + concept_key
+        log.debug "lookup concept_key = " + concept_key
 
         def baseNode = conceptsResourceService.getByKey(concept_key)
         log.trace(baseNode.class.name)
 
         def List<String> trials = trailsForResultSet(result_instance_id)
-        log.trace("trials = " + trials)
+        log.debug("trials = " + trials)
 
         if (xTrialsCaseFlag) {
             log.debug("Across Trials case")
@@ -1159,13 +1159,13 @@ class I2b2HelperService {
         checkQueryResultAccess result_instance_id
 
         log.debug "----------------- start addConceptDataToTable"
-        log.trace "concept_key = " + concept_key
-        log.trace "is Leaf Concept key: " + isLeafConceptKey(concept_key)
+        log.debug "concept_key = " + concept_key
+
+        def leafConceptFlag =  isLeafConceptKey(concept_key)
+        log.debug "is Leaf Concept key: " + leafConceptFlag
 
         def xTrialsCaseFlag = isXTrialsConcept(concept_key)
-
-        log.trace "is XTrials case = " + xTrialsCaseFlag
-
+        log.debug "is XTrials case = " + xTrialsCaseFlag
 
         /* As the column headers only show the (in many cases ambiguous) leaf part of the concept path,
          * showing the full concept path in the tooltip is much more informative.
@@ -1178,7 +1178,7 @@ class I2b2HelperService {
         String columnid = concept_key.encodeAsSHA1()
         String columnname = getColumnNameFromKey(concept_key).replace(" ", "_")
         String columntooltip = keyToPath(concept_key).replaceAll('[^a-zA-Z0-9_\\-\\\\]+','_')
-        if (isLeafConceptKey(concept_key)) {
+        if (leafConceptFlag) {
             log.trace "----------------- this is a Leaf Node"
 
             /*add the column to the table if its not there*/
@@ -1195,7 +1195,7 @@ class I2b2HelperService {
                 insertConceptDataIntoTable(columnid, concept_key, result_instance_id, valueLeafNodeFlag, tablein)
             }
 
-            if (isValueConceptKey(concept_key)) {
+            if (valueLeafNodeFlag) {
 
                 if (tablein.getColumn(columnid) == null) {
                     tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", "number", columntooltip));
