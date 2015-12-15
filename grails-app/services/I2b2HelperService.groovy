@@ -1246,8 +1246,6 @@ class I2b2HelperService {
                     /*If I already have this subject mark it in the subset column as belonging to both subsets*/
                     String subject = row.PATIENT_NUM
                     String value = row.TVAL_CHAR
-                    println("-------> " + row.TVAL_CHAR)
-                    println("------->>" + value.toString())
 
                     if (value == null) {
                         value = "Y";
