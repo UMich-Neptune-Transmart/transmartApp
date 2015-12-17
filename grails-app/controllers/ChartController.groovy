@@ -261,7 +261,7 @@ class ChartController {
 
         String analysis_key = i2b2HelperService.getConceptKeyForAnalysis(concept_key);
 
-        log.debug "i2b2HelperService.getConceptKeyForAnalysis(concept_key) returns " + analysis_key;
+        log.trace "i2b2HelperService.getConceptKeyForAnalysis(concept_key) returns " + analysis_key;
 
         PrintWriter pw = new PrintWriter(response.getOutputStream());
         pw.write("<html><head><link rel='stylesheet' type='text/css' href='${resource(dir: 'css', file: 'chartservlet.css')}'></head><body><div class='analysis'>");
@@ -1078,7 +1078,7 @@ for (int i = 0; i < mapsize; i++)
 
             if (valueLeafNodeFlag) {
 
-                log.debug "----------------- value concept renderConceptAnalysisNew"
+                log.trace "----------------- value concept renderConceptAnalysisNew"
 
                 Set<String> childConcepts = new HashSet<String>();
 
@@ -1328,7 +1328,7 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("</td></tr></td></tr></table></td></tr></table>")
 
             } else {
-                log.debug "----------------- non-value concept renderConceptAnalysisNew"
+                log.trace "----------------- non-value concept renderConceptAnalysisNew"
                 def HashMap<String, Integer> results1
                 def HashMap<String, Integer> results2
                 def SortedMap<String,HashMap<String,Integer>> results1ByTrial
@@ -1366,8 +1366,8 @@ for (int i = 0; i < mapsize; i++)
                     }
                 }
 
-                log.debug("Study key set = " + studyList)
-                log.debug "----------------- before render - non-value concept renderConceptAnalysisNew"
+                log.trace("Study key set = " + studyList)
+                log.trace "----------------- before render - non-value concept renderConceptAnalysisNew"
 
                 pw.write("<table width='100%'><tr>");
                 pw.write("<tr><td align='center' colspan='2'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
@@ -1409,7 +1409,7 @@ for (int i = 0; i < mapsize; i++)
                     pw.write("</td></tr>")
                 }
                 pw.write("</table>")
-                log.debug "----------------- end render - non-value concept renderConceptAnalysisNew"
+                log.trace "----------------- end render - non-value concept renderConceptAnalysisNew"
 
             }
             log.debug("renderConceptAnalysisNew: finished rendering " + concept_key)
