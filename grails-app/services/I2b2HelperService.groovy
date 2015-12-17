@@ -1192,7 +1192,7 @@ class I2b2HelperService {
                 tablein.putColumn("subject", new ExportColumn("subject", "Subject", "", "string"));
             }
             if (tablein.getColumn(columnid) == null) {
-                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", columnType));
+                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", columnType,columntooltip));
             }
 
             if (xTrialsCaseFlag) {
@@ -1238,7 +1238,7 @@ class I2b2HelperService {
                 tablein.putColumn("subject", new ExportColumn("subject", "Subject", "", "string"));
             }
             if (tablein.getColumn(columnid) == null) {
-                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", columnType));
+                tablein.putColumn(columnid, new ExportColumn(columnid, columnname, "", columnType,columntooltip));
             }
 
             if (xTrialsCaseFlag) {
