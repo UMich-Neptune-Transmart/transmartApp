@@ -265,8 +265,7 @@ class I2b2HelperService {
         // to use the API and to rewrite the underlying object class to use the API.
         // A special case was made for across trials data, because, at this time of this change,
         // there is no unified representation of across trials data and 'normal' data
-
-        //log.debug "----------------- isLeafConceptKey - String case"
+        //log.trace "----------------- isLeafConceptKey - String case"
 
         if (isXTrialsConcept(concept_key)) {
             def itemProbe = conceptsResourceService.getByKey(concept_key)
@@ -288,7 +287,7 @@ class I2b2HelperService {
         // profuse appoligies to future programmers reading this code; it is clearly a mess
         // and this is a patch on top of a mess; the correct solution is to rewrite all this code
         // to use the API and to rewrite the underlying object class to use the API.
-        //log.debug "----------------- isLeafConceptKey - AcrossTrialsOntologyTerm case"
+        //log.trace "----------------- isLeafConceptKey - AcrossTrialsOntologyTerm case"
         EnumSet probeSet = conceptItem.visualAttributes
         if (probeSet.size() == 0) return false;
         return probeSet.any{ it == org.transmartproject.core.ontology.OntologyTerm.VisualAttributes.LEAF }
@@ -301,7 +300,7 @@ class I2b2HelperService {
         // profuse appoligies to future programmers reading this code; it is clearly a mess
         // and this is a patch on top of a mess; the correct solution is to rewrite all this code
         // to use the API and to rewrite the underlying object class to use the API.
-        //log.debug "----------------- isLeafConceptKey - I2b2 case"
+        //log.trace "----------------- isLeafConceptKey - I2b2 case"
         return conceptItem.cVisualattributes.contains("L")
     }
 
@@ -391,7 +390,7 @@ class I2b2HelperService {
                     concept_cd + "' AND PATIENT_NUM IN (select distinct patient_num " +
                     "from qt_patient_set_collection where result_instance_id = " + result_instance_id + ")";
 
-            log.debug("executing query: sqlt=" + sqlt);
+            log.trace("executing query: sqlt=" + sqlt);
             try {
                 //sql.eachRow(sqlt, [concept_cd, result_instance_id], {row ->
                 sql.eachRow(sqlt, { row ->
@@ -428,7 +427,7 @@ class I2b2HelperService {
 		    PATIENT_NUM IN (select distinct patient_num
 			from qt_patient_set_collection
 			where result_instance_id = ?)""";
-        log.debug("executing query: " + sqlt);
+        log.trace("executing query: " + sqlt);
         sql.eachRow(sqlt, [
                 concept_cd,
                 result_instance_id
@@ -548,8 +547,7 @@ class I2b2HelperService {
      * Determines if a concept code is a value concept code or not by checking the metadata xml
      */
     def Boolean isValueConceptCode(String concept_code) {
-        log.debug "----------------- start isValueConceptCode"
-        log.debug "Checking isValueConceptCode for code:" + concept_code
+        log.trace "Checking isValueConceptCode for code:" + concept_code
         Boolean res = false;
         Sql sql = new Sql(dataSource);
         String sqlt = "SELECT C_METADATAXML FROM I2B2METADATA.I2B2 WHERE C_BASECODE = ?"
@@ -645,20 +643,20 @@ class I2b2HelperService {
 
         def SortedMap<String, HashMap<String, Integer>> results = new TreeMap<String, HashMap<String, Integer>>()
 
-        log.debug "input concept_key = " + concept_key
+        log.trace "input concept_key = " + concept_key
         if (leafNodeFlag) {
             concept_key = getParentConceptKey(concept_key)
         }
-        log.debug "lookup concept_key = " + concept_key
+        log.trace "lookup concept_key = " + concept_key
 
         def baseNode = conceptsResourceService.getByKey(concept_key)
         log.trace(baseNode.class.name)
 
         def List<String> trials = trailsForResultSet(result_instance_id)
-        log.debug("trials = " + trials)
+        log.trace("trials = " + trials)
 
         if (xTrialsCaseFlag) {
-            log.debug("Across Trials case")
+            log.trace("Across Trials case")
             def itemProbe = conceptsResourceService.getByKey(concept_key)
             def String modifier_cd = itemProbe.modifierDimension.code
             for (String trial: trials) {
@@ -667,14 +665,14 @@ class I2b2HelperService {
             }
 
         } else {
-            log.debug("Single study case")
+            log.trace("Single study case")
             // if not across trials; all parients in same trial/study
             def study = "Study"
             if (!trials.isEmpty()) study = trials[0]
             results.put(study,getConceptDistributionDataForConcept(concept_key, result_instance_id))
         }
 
-        log.debug("results.size() = " + results.size())
+        log.trace("results.size() = " + results.size())
         log.debug "----------------- end getConceptDistributionDataForConceptByTrial"
         return results
     }
@@ -836,9 +834,9 @@ class I2b2HelperService {
             modifierList.add(childNode.code)
         }
 
-        log.debug "modifierList = " + modifierList
-        log.debug "result_instance_id = " + result_instance_id
-        log.debug "trial = " + trial
+        log.trace "modifierList = " + modifierList
+        log.trace "result_instance_id = " + result_instance_id
+        log.trace "trial = " + trial
 
         def sqlt = """
             SELECT count(subject_id) as n, modifier_cd
@@ -1046,7 +1044,7 @@ class I2b2HelperService {
             ORDER BY
                 I.PATIENT_NUM''';
 
-        log.debug "Initial grid query: $sqlt, riid: $result_instance_id"
+        log.trace "Initial grid query: $sqlt, riid: $result_instance_id"
 
         //if i have an empty table structure so far
         if (tablein.getColumns().size() == 0) {
@@ -1158,13 +1156,13 @@ class I2b2HelperService {
         checkQueryResultAccess result_instance_id
 
         log.debug "----------------- start addConceptDataToTable <<<<<< <<<<<< <<<<<<"
-        log.debug "concept_key = " + concept_key
+        log.trace "concept_key = " + concept_key
 
         def leafConceptFlag =  isLeafConceptKey(concept_key)
-        log.debug "is Leaf Concept key: " + leafConceptFlag
+        log.trace "is Leaf Concept key: " + leafConceptFlag
 
         def xTrialsCaseFlag = isXTrialsConcept(concept_key)
-        log.debug "is XTrials case = " + xTrialsCaseFlag
+        log.trace "is XTrials case = " + xTrialsCaseFlag
 
         /* As the column headers only show the (in many cases ambiguous) leaf part of the concept path,
          * showing the full concept path in the tooltip is much more informative.
@@ -1212,11 +1210,11 @@ class I2b2HelperService {
             def item = conceptsResourceService.getByKey(concept_key)
 
             log.debug "----------------- this is Folder Node"
-            log.debug "concept_key = " + concept_key
-            log.debug "children? " + !!item.children
+            log.trace "concept_key = " + concept_key
+            log.trace "children? " + !!item.children
 
             if (!item.children) {
-                log.debug("Can not show data in gridview for empty node: " + concept_key)
+                log.trace("Can not show data in gridview for empty node: " + concept_key)
                 return tablein
             }
 
@@ -1227,7 +1225,7 @@ class I2b2HelperService {
 				}
                 return !isLeafConceptKey(it) || nodeXmlRepresentsValueConcept(it.metadataxml)
             }) {
-                log.debug("Can not show data in gridview for folder nodes with mixed type of children")
+                log.trace("Can not show data in gridview for folder nodes with mixed type of children")
                 return tablein
             }
 
@@ -1244,9 +1242,9 @@ class I2b2HelperService {
             }
 
             if (xTrialsCaseFlag) {
-                log.debug "----------------- this is Folder Node - xTrails case"
+                log.trace "----------------- this is Folder Node - xTrails case"
                 item.children.each { child ->
-                    log.debug "Child key code: " + child.key
+                    log.trace "Child key code: " + child.key
                     def valueLeafNodeFlag = false
                     concept_key = child.key
                     insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein)
@@ -1258,7 +1256,7 @@ class I2b2HelperService {
                 // Store the concept paths to query
                 def paths = item.children*.fullName
 
-                log.debug "Children Paths: " + paths
+                log.trace "Children Paths: " + paths
 
                 // Find the concept codes for the given children
                 def conceptCriteria = ConceptDimension.createCriteria()
@@ -1266,7 +1264,7 @@ class I2b2HelperService {
                     'in'("conceptPath", paths)
                 }
 
-                log.debug "Children concepts: " + concepts*.conceptCode
+                log.trace "Children concepts: " + concepts*.conceptCode
 
                 // Determine the patients to query
                 def patientIds = QtPatientSetCollection.executeQuery("SELECT q.patient.id FROM QtPatientSetCollection q WHERE q.resultInstance.id = ?", result_instance_id.toLong())
@@ -1283,7 +1281,7 @@ class I2b2HelperService {
                     it?.toLong()
                 }])
 
-                log.debug "results length: " + results.length
+                log.trace "results length: " + results.length
 
                 results.each { row ->
 
@@ -1376,6 +1374,7 @@ class I2b2HelperService {
     }
 
     def fetchAcrossTiralsData(concept_key,result_instance_id){
+        log.debug "----------------- fetchAcrossTiralsData"
 
         def valueLeafNodeFlag = isValueConceptKey(concept_key)
         def dataList = []
@@ -1458,8 +1457,8 @@ class I2b2HelperService {
      * */
     def HashMap<String, Integer> getPatientDemographicDataForSubset(String col, String result_instance_id) {
 
-        log.debug("in getPatientDemographicDataForSubset ...")
-        log.debug("args: col = " + col + ", result_instance_id = " + result_instance_id)
+        log.trace("in getPatientDemographicDataForSubset ...")
+        log.trace("args: col = " + col + ", result_instance_id = " + result_instance_id)
         checkQueryResultAccess result_instance_id
 
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
@@ -4285,7 +4284,7 @@ class I2b2HelperService {
         StringBuilder trialQ = new StringBuilder("select distinct s.trial_name from de_subject_sample_mapping s ");
         trialQ.append(" where s.patient_id in (").append(ids).append(") and s.platform = 'MRNA_AFFYMETRIX'");
 
-        log.debug("getTrialName used this query: " + trialQ.toString());
+        log.trace("getTrialName used this query: " + trialQ.toString());
 
         String trialNames = "";
         sql.eachRow(trialQ.toString(), { row ->
