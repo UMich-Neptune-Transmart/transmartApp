@@ -1078,9 +1078,9 @@ for (int i = 0; i < mapsize; i++)
 
             if (valueLeafNodeFlag) {
 
-                Set<String> childConcepts = new HashSet<String>();
+                log.debug "----------------- value concept renderConceptAnalysisNew"
 
-                log.trace "----------------- for value Node"
+                Set<String> childConcepts = new HashSet<String>();
 
                 ArrayList<Double> valuesAlist3 = new ArrayList<Double>();
                 ArrayList<Double> valuesAlist4 = new ArrayList<Double>();
@@ -1328,7 +1328,7 @@ for (int i = 0; i < mapsize; i++)
                 pw.write("</td></tr></td></tr></table></td></tr></table>")
 
             } else {
-                log.trace "----------------- non-value concept renderConceptAnalysisNew"
+                log.debug "----------------- non-value concept renderConceptAnalysisNew"
                 def HashMap<String, Integer> results1
                 def HashMap<String, Integer> results2
                 def SortedMap<String,HashMap<String,Integer>> results1ByTrial
@@ -1366,7 +1366,8 @@ for (int i = 0; i < mapsize; i++)
                     }
                 }
 
-                log.trace("Study key set = " + studyList)
+                log.debug("Study key set = " + studyList)
+                log.debug "----------------- before render - non-value concept renderConceptAnalysisNew"
 
                 pw.write("<table width='100%'><tr>");
                 pw.write("<tr><td align='center' colspan='2'><div class='analysistitle'>Analysis of " + concept_name + " for subsets:</div></td></tr>");
@@ -1408,6 +1409,7 @@ for (int i = 0; i < mapsize; i++)
                     pw.write("</td></tr>")
                 }
                 pw.write("</table>")
+                log.debug "----------------- end render - non-value concept renderConceptAnalysisNew"
 
             }
             log.debug("renderConceptAnalysisNew: finished rendering " + concept_key)
