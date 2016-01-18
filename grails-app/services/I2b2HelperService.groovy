@@ -82,9 +82,17 @@ class I2b2HelperService {
                 values.add(row[0])
             }
         });
-        double[] returnvalues = new double[values.size()]
+        int count = 0;
         for (int i = 0; i < values.size(); i++) {
-            returnvalues[i] = values.get(i)
+            if (values.get(i) != null) count++
+        }
+        double[] returnvalues = new double[count]
+
+        int index = 0
+        for (int i = 0; i < values.size(); i++) {
+            if (values.get(i) != null) {
+                returnvalues[index++] = values.get(i)
+            }
         }
         return returnvalues;
     }
