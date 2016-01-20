@@ -36,7 +36,7 @@
 		<li>No attempt shall be made to link subject data to a participant.</li>
 		<li>Any disclosure of data, analysis, or results from tranSMART will follow the procedures outlined in the contract.</li>
 		<li>Further data analysis on hypotheses generated via tranSMART will be pursued by the RPC2 working groups.</li>
-		<li>As RPC2 data are continously updated, there will be periodic, announced updates to the data in tranSMART, with resulting possible changes in analysis results.</li>
+		<li>As RPC2 data are continuously updated, there will be periodic, announced updates to the data in tranSMART, with resulting possible changes in analysis results.</li>
 		</ul>
 		</p>
         </div>
