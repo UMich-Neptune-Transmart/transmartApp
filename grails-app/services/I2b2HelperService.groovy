@@ -5842,6 +5842,8 @@ class I2b2HelperService {
             ls.put(keyToPath(conceptkey), row.secure_obj_token);
             log.trace("@@found" + conceptkey);
         })
+        // For across trials - assue that the top level node is public
+        ls.put("\\Across Trials\\","EXP:PUBLIC")
         return ls;
     }
 
