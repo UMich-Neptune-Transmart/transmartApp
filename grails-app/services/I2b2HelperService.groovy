@@ -5566,10 +5566,37 @@ class I2b2HelperService {
     /****************************************New security stuff*************************/
 
     /**
+     *  check whether the current use is permitted to view Across Trials data
+     */
+    def currentUserHasAcrossTrailsAccess(){
+        def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
+        return isXTrialsRole(user);
+    }
+
+    /**
+     *  check whether the current use is permitted to view Across Trials data
+     */
+    def isXTrials(user) {
+        def access = false;
+        for (role in user.authorities) {
+            if (isXTrialsRole(role)) {
+                access = true;
+            }
+        }
+        return access;
+
+    }
+
+    /**
      *  check whether or not a role is admin
-     *
-     *
-     *  */
+     */
+    def isXTrialsRole(role) {
+        return role.authority.equals("ROLE_ACROSS_TRIALS");
+    }
+
+    /**
+     *  check whether or not a role is admin
+     */
     def isAdminRole(role) {
         return role.authority.equals("ROLE_ADMIN") || role.authority.equals("ROLE_DATASET_EXPLORER_ADMIN");
     }
@@ -5706,13 +5733,20 @@ class I2b2HelperService {
                 } else if (tokens.containsKey(childtoken)) //null tokens are assumed to be unlocked
                 {
                     access.put(key, tokens[childtoken]); //found access for this token so put in access level
+                } else if (isXTrialsTopLevel(key) && isXTrials(user)) {
+                    access.put(key, "VIEW");
                 } else {
                     access.put(key, "Locked"); //didn't find authorization for this token
                 }
             }
         }
-        log.debug(access.toString());
+        log.debug("In getAccess: " + access.toString());
         return access;
+    }
+
+    def isXTrialsTopLevel(nodeName) {
+        String match = "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
+        return match.equals(nodeName)
     }
 
     /**
@@ -5842,8 +5876,8 @@ class I2b2HelperService {
             ls.put(keyToPath(conceptkey), row.secure_obj_token);
             log.trace("@@found" + conceptkey);
         })
-        // For across trials - assue that the top level node is public
-        ls.put("\\Across Trials\\","EXP:PUBLIC")
+        // for across trials - mark top level know with special token for downstream access control
+        ls.put("\\Across Trials\\","EXP:ACROSS_TRIALS")
         return ls;
     }
 
