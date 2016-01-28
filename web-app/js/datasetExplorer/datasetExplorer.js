@@ -2273,9 +2273,21 @@ function runAllQueries(callback, panel) {
     if (isSubsetEmpty(1) && isSubsetEmpty(2)) {
         if (panel) {
             panel.body.unmask();
-		}
-		Ext.Msg.alert('Subsets are empty', 'All subsets are empty. Please select subsets.');
-	}
+        }
+        Ext.Msg.alert('Subsets are empty', 'All subsets are empty. Please select subsets.');
+        return;
+    }
+
+    panel.body.unmask();
+    for (var i = 1; i <= GLOBAL.NumOfSubsets; i++) {
+        if (isSubsetOnlyExclude(i)) {
+            if (panel) {
+                panel.body.unmask();
+            }
+            Ext.Msg.alert('Subset is only exclude', 'Subset ' + i + ' contains only EXCLUDE caluses. Please add at least one INCLUDE clause.');
+            return;
+        }
+    }
 
 	// setup the number of subsets that need running
 	var subsetstorun = 0;
