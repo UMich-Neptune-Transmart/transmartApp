@@ -660,7 +660,7 @@ class I2b2HelperService {
         def baseNode = conceptsResourceService.getByKey(concept_key)
         log.trace(baseNode.class.name)
 
-        def List<String> trials = trailsForResultSet(result_instance_id)
+        def List<String> trials = trialsForResultSet(result_instance_id)
         log.trace("trials = " + trials)
 
         if (xTrialsCaseFlag) {
@@ -6316,10 +6316,10 @@ class I2b2HelperService {
         }
     }
 
-    def List<String> trailsForResultSet (String result_instance_id) {
+    def List<String> trialsForResultSet (String result_instance_id) {
         checkQueryResultAccess result_instance_id
 
-        List<String> trails = new ArrayList<String>();
+        List<String> trials = new ArrayList<String>();
         Sql sql = new Sql(dataSource)
         String sqlt = """
             SELECT distinct trial
@@ -6331,10 +6331,10 @@ class I2b2HelperService {
             """
         log.trace(sqlt)
         sql.eachRow(sqlt, [result_instance_id], {row ->
-            trails.add(row.trial)
+            trials.add(row.trial)
         })
 
-        return trails
+        return trials
     }
 }
 
