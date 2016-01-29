@@ -1046,6 +1046,7 @@ for (int i = 0; i < mapsize; i++)
     }
 
     private void renderConceptAnalysisNew(String concept_key, String result_instance_id1, String result_instance_id2, PrintWriter pw, HttpServletRequest request) {
+        def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         log.debug "----------------- start ChartController renderConceptAnalysisNew"
         try {
             log.debug("Rendering concept analysis for concept key: " + concept_key)
@@ -1341,7 +1342,7 @@ for (int i = 0; i < mapsize; i++)
                 String allTrialsKey = "All Trials"
 
                 if (s1) {
-                    results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1)
+                    results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1, user)
                     results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1)
                     height = 80 + 15 * results1.size()
                     studyList.addAll(results1ByTrial.keySet())
@@ -1352,7 +1353,7 @@ for (int i = 0; i < mapsize; i++)
                     }
                 }
                 if (s2) {
-                    results2ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id2)
+                    results2ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id2, user)
                     results2 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id2)
                     height = Math.max(80 + 15 * results2.size(),height)
                     for (String key: results2ByTrial.keySet()){

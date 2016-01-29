@@ -642,7 +642,7 @@ class I2b2HelperService {
         return results;
     }
 
-    def SortedMap<String, HashMap<String, Integer>> getConceptDistributionDataForConceptByTrial(String concept_key, String result_instance_id) throws SQLException {
+    def SortedMap<String, HashMap<String, Integer>> getConceptDistributionDataForConceptByTrial(String concept_key, String result_instance_id, AuthUser user) throws SQLException {
         log.debug "----------------- start getConceptDistributionDataForConceptByTrial"
         checkQueryResultAccess result_instance_id
 
@@ -660,7 +660,7 @@ class I2b2HelperService {
         def baseNode = conceptsResourceService.getByKey(concept_key)
         log.trace(baseNode.class.name)
 
-        def List<String> trials = trialsForResultSet(result_instance_id)
+        def trials = trialsForResultSet(result_instance_id, user)
         log.trace("trials = " + trials)
 
         if (xTrialsCaseFlag) {
@@ -6316,13 +6316,14 @@ class I2b2HelperService {
         }
     }
 
-    def List<String> trialsForResultSet (String result_instance_id) {
-        checkQueryResultAccess result_instance_id
+    def trialsForResultSet (String result_instance_id, AuthUser user) {
+        //checkQueryResultAccess result_instance_id
+        def trials = [:]
+        def authTrials = []
 
-        List<String> trials = new ArrayList<String>();
         Sql sql = new Sql(dataSource)
         String sqlt = """
-            SELECT distinct trial
+            SELECT distinct trial, SECURE_OBJ_TOKEN
             FROM patient_trial pt
                 JOIN qt_patient_set_collection psc
                     ON pt.patient_num=psc.patient_num
@@ -6331,10 +6332,15 @@ class I2b2HelperService {
             """
         log.trace(sqlt)
         sql.eachRow(sqlt, [result_instance_id], {row ->
-            trials.add(row.trial)
+            trials.put(row.trial, row.secure_obj_token)
         })
 
-        return trials
+        def trialsAccess = getAccess(trials, user)
+        trialsAccess.each { trial, access ->
+            if (access != 'Locked')
+                authTrials.add(trial)
+        }
+        return authTrials
     }
 }
 
