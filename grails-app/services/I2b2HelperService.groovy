@@ -2,6 +2,7 @@ import com.recomdata.db.DBHelper
 import com.recomdata.export.*
 import grails.util.Holders
 import groovy.sql.Sql
+import groovyx.gpars.extra166y.CustomConcurrentHashMap
 import i2b2.*
 import org.transmart.CohortInformation
 import org.transmart.searchapp.AuthUser
@@ -454,9 +455,11 @@ class I2b2HelperService {
     /**
      *  Gets the count of a a patient set fromt he result instance id
      */
-    def Integer getPatientSetSize(String result_instance_id) {
+    def Integer getPatientSetSize(String result_instance_id, AuthUser user) {
         checkQueryResultAccess result_instance_id
-
+        def authStudies = getAuthorizedStudies(user)
+        def authStudiesString = getSqlInString(authStudies)
+        log.debug("authorized patient set studies: " + authStudiesString)
         log.debug("getPatientSetSize(): result_instance_id = " + result_instance_id);
         Integer i = 0;
         Sql sql = new Sql(dataSource);
@@ -466,7 +469,9 @@ class I2b2HelperService {
                 FROM qt_patient_set_collection ps
                     JOIN patient_dimension pd
                     ON ps.patient_num=pd.patient_num
+                    JOIN patient_trial pt ON pt.patient_num = ps.patient_num
                 WHERE ps.result_instance_id = CAST(? AS numeric)
+                AND pt.trial IN (""" + authStudiesString + """)
             ) pateint_set"""
 //        String sqlt = """select count(distinct(patient_num)) as patcount
 //						 FROM qt_patient_set_collection
@@ -1463,11 +1468,13 @@ class I2b2HelperService {
     /**
      * Gets a distribution of information from the patient dimension table
      * */
-    def HashMap<String, Integer> getPatientDemographicDataForSubset(String col, String result_instance_id) {
+    def HashMap<String, Integer> getPatientDemographicDataForSubset(String col, String result_instance_id, AuthUser user) {
 
         log.trace("in getPatientDemographicDataForSubset ...")
         log.trace("args: col = " + col + ", result_instance_id = " + result_instance_id)
         checkQueryResultAccess result_instance_id
+        def authStudies = getAuthorizedStudies(user)
+        def authStudiesString = getSqlInString(authStudies)
 
         HashMap<String, Integer> results = new LinkedHashMap<String, Integer>();
         Sql sql = new Sql(dataSource)
@@ -1478,6 +1485,8 @@ class I2b2HelperService {
                 FROM qt_patient_set_collection ps
                 JOIN patient_dimension pd
                 ON ps.patient_num=pd.patient_num AND result_instance_id = ?
+                JOIN patient_trial pt ON pt.patient_num = ps.patient_num
+                WHERE pt.trial IN (""" + authStudiesString + """)
         ) base
         GROUP BY cat
         """;
@@ -5852,6 +5861,47 @@ class I2b2HelperService {
     }
 
     /**
+     * Gets a list of studies the user is authorized to view
+     */
+    def getAuthorizedStudies(AuthUser user) {
+        def admin = isAdmin(user)
+        def allStudies = getAllStudiesWithTokens()
+        def tokenmap = getSecureTokensWithAccessForUser(user)
+        def authStudies = []
+
+        if (admin) {
+            authStudies = allStudies.keySet()
+        }
+        else {
+            allStudies.each { key, value ->
+                if (value == "EXP:PUBLIC") {
+                    authStudies.add(key)
+                } else if (tokenmap.containsKey("EXP:" + key)) {
+                    authStudies.add(key)
+                }
+            }
+        }
+        return authStudies
+    }
+
+    def getSqlInString(inList) {
+        if (inList.getAt(0).isNumber())
+            return inList.join(",")
+        else
+            return inList.collect{"'$it'"}.join(",")
+    }
+
+    def getAllStudiesWithTokens() {
+        def studies = [:]
+        Sql sql = new Sql(dataSource)
+        String sqlt = "SELECT sourcesystem_cd, secure_obj_token FROM i2b2metadata.i2b2_secure WHERE c_hlevel = 1"
+        sql.eachRow(sqlt, [], { row ->
+            studies.put(row.sourcesystem_cd, row.secure_obj_token);
+        })
+        return studies;
+    }
+
+    /**
      * Gets the children paths concepts of a parent key
      */
     def getRootPathsWithTokens() {
@@ -5868,7 +5918,7 @@ class I2b2HelperService {
         //     		})
         //		 
         //		Changed for Sanofi: Root levels are at 0 or -1.
-        String sqlt = "SELECT C_FULLNAME, SECURE_OBJ_TOKEN FROM i2b2metadata.i2b2_SECURE WHERE c_hlevel IN (-1, 0) ORDER BY C_FULLNAME";
+        String sqlt = "SELECT C_FULLNAME, SOURCESYSTEM_CD, SECURE_OBJ_TOKEN FROM i2b2metadata.i2b2_SECURE WHERE c_hlevel IN (-1, 0) ORDER BY C_FULLNAME";
         sql.eachRow(sqlt, [], { row ->
             String fullname = row.c_fullname;
             String prefix = fullname.substring(0, fullname.indexOf("\\", 2)); //get the prefix to put on to the fullname to make a key
