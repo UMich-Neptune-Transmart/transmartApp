@@ -1027,15 +1027,18 @@ class I2b2HelperService {
     /**
      * Fills the main demographic data in an export table for the grid
      */
-    def ExportTableNew addAllPatientDemographicDataForSubsetToTable(ExportTableNew tablein, String result_instance_id, String subset) {
+    def ExportTableNew addAllPatientDemographicDataForSubsetToTable(ExportTableNew tablein, String result_instance_id, String subset, AuthUser user) {
         checkQueryResultAccess result_instance_id
 
         log.trace("Getting sampleCD's for paitent number")
         def mapOfSampleCdsByPatientNum = buildMapOfSampleCdsByPatientNum(result_instance_id)
 
+        def authStudies = getAuthorizedStudies(user)
+        def authStudiesString = getSqlInString(authStudies)
+
         log.trace("Adding patient demographic data to grid with result instance id:" + result_instance_id + " and subset: " + subset)
         Sql sql = new Sql(dataSource)
-        String sqlt = '''
+        String sqlt = """
             SELECT
                 I.*
             FROM (
@@ -1048,14 +1051,16 @@ class I2b2HelperService {
                 WHERE
                     p.PATIENT_NUM IN (
                         SELECT
-                            DISTINCT patient_num
+                            DISTINCT ps.patient_num
                         FROM
-                            qt_patient_set_collection
+                            qt_patient_set_collection ps
+                        JOIN patient_trial pt ON pt.patient_num = ps.patient_num
                         WHERE
+                            pt.trial IN (""" + authStudiesString + """) AND
                             result_instance_id = ? ) )
                 I
             ORDER BY
-                I.PATIENT_NUM''';
+                I.PATIENT_NUM""";
 
         log.trace "Initial grid query: $sqlt, riid: $result_instance_id"
 
@@ -1165,7 +1170,7 @@ class I2b2HelperService {
     /**
      * Adds a column of data to the grid export table
      */
-    def ExportTableNew addConceptDataToTable(ExportTableNew tablein, String concept_key, String result_instance_id) {
+    def ExportTableNew addConceptDataToTable(ExportTableNew tablein, String concept_key, String result_instance_id, AuthUser user) {
         checkQueryResultAccess result_instance_id
 
         log.debug "----------------- start addConceptDataToTable <<<<<< <<<<<< <<<<<<"
@@ -1209,7 +1214,7 @@ class I2b2HelperService {
             }
 
             if (xTrialsCaseFlag) {
-                insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein)
+                insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein,user)
             }
             else {
                 insertConceptDataIntoTable(columnid, concept_key, result_instance_id, valueLeafNodeFlag, tablein)
@@ -1260,7 +1265,7 @@ class I2b2HelperService {
                     log.trace "Child key code: " + child.key
                     def valueLeafNodeFlag = false
                     concept_key = child.key
-                    insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein)
+                    insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein, user)
                 }
             } else {
 
@@ -1386,11 +1391,14 @@ class I2b2HelperService {
         }
     }
 
-    def fetchAcrossTrialsData(concept_key,result_instance_id){
+    def fetchAcrossTrialsData(concept_key,result_instance_id, user){
         log.debug "----------------- fetchAcrossTrialsData"
 
         def valueLeafNodeFlag = isValueConceptKey(concept_key)
         def dataList = []
+
+        def authStudies = getAuthorizedStudies(user)
+        def authStudiesString = getSqlInString(authStudies)
 
         def itemProbe = conceptsResourceService.getByKey(concept_key)
         String modifier_cd = itemProbe.modifierDimension.code
@@ -1410,9 +1418,11 @@ class I2b2HelperService {
                 WHERE
                     modifier_cd = ?
                     AND concept_cd != 'SECURITY'
-                    AND PATIENT_NUM IN (select distinct patient_num
-                        from qt_patient_set_collection
-                        where result_instance_id = ?)
+                    AND PATIENT_NUM IN (select distinct ps.patient_num
+                        from qt_patient_set_collection ps
+                        JOIN patient_trial pt ON pt.patient_num = ps.patient_num
+                        WHERE pt.trial IN (""" + authStudiesString + """)
+                        AND result_instance_id = ?)
                 """
 
             sql.eachRow(sqlt, [modifier_cd, result_instance_id], { row ->
@@ -1431,9 +1441,11 @@ class I2b2HelperService {
                 WHERE
                     modifier_cd = ?
                     AND concept_cd != 'SECURITY'
-                    AND PATIENT_NUM IN (select distinct patient_num
-                        from qt_patient_set_collection
-                        where result_instance_id = ?)
+                    AND PATIENT_NUM IN (select distinct ps.patient_num
+                        from qt_patient_set_collection ps
+                        JOIN patient_trial pt ON pt.patient_num = ps.patient_num
+                        WHERE pt.trial IN (""" + authStudiesString + """)
+                        AND result_instance_id = ?)
                 """
 
             sql.eachRow(sqlt, [modifier_cd, result_instance_id], { row ->
@@ -1445,10 +1457,10 @@ class I2b2HelperService {
         dataList
     }
 
-    def insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein) {
+    def insertAcrossTrialsConceptDataIntoTable(columnid,concept_key,result_instance_id,valueLeafNodeFlag,tablein, user) {
         log.debug "----------------- insertAcrossTrialsConceptDataIntoTable <<<< ---- <<<<<"
 
-        def data = fetchAcrossTrialsData(concept_key,result_instance_id)
+        def data = fetchAcrossTrialsData(concept_key,result_instance_id, user)
         data.each{
             def subject = it.subject
             def value = it.value

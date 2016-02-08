@@ -632,6 +632,7 @@ class ChartController {
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
         def result_instance_id2 = params.result_instance_id2;
+        def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
 
         /*which subsets are present? */
         boolean s1 = (result_instance_id1 == "" || result_instance_id1 == null) ? false : true;
@@ -645,8 +646,8 @@ class ChartController {
         if (table == null) {
 
             table = new ExportTableNew();
-            if (s1) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id1, "subset1");
-            if (s2) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id2, "subset2");
+            if (s1) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id1, "subset1", user);
+            if (s2) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id2, "subset2", user);
 
             List<String> keys = i2b2HelperService.getConceptKeysInSubsets(result_instance_id1, result_instance_id2);
             Set<String> uniqueConcepts = i2b2HelperService.getDistinctConceptSet(result_instance_id1, result_instance_id2);
@@ -657,8 +658,8 @@ class ChartController {
             for (int i = 0; i < keys.size(); i++) {
 
                 log.trace("adding concept data for " + keys.get(i));
-                if (s1) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id1);
-                if (s2) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id2);
+                if (s1) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id1, user);
+                if (s2) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id2, user);
             }
         }
         PrintWriter pw = new PrintWriter(response.getOutputStream());
@@ -680,8 +681,8 @@ class ChartController {
                 conceptKeys.add(concept_key);
 
             for (ck in conceptKeys) {
-                if (s1) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id1);
-                if (s2) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id2);
+                if (s1) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id1, user);
+                if (s2) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id2, user);
             }
         }
         pw.write(table.toJSONObject().toString(5));
