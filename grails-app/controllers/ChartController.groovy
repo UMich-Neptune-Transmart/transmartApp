@@ -114,7 +114,7 @@ class ChartController {
         log.trace(user.toString());
         def concept_key = params.concept_key;
         log.trace("Requested counts for parent_concept_path=" + concept_key);
-        def counts = i2b2HelperService.getChildrenWithPatientCountsForConcept(concept_key)
+        def counts = i2b2HelperService.getChildrenWithPatientCountsForConcept(concept_key, user)
         def access = i2b2HelperService.getChildrenWithAccessForUserNew(concept_key, user)
         log.trace("access:" + (access as JSON));
         log.trace("counts = " + (counts as JSON))

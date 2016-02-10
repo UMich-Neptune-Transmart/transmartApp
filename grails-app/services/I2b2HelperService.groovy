@@ -316,7 +316,7 @@ class I2b2HelperService {
     /**
      * Gets the distinct patient counts for the children of a parent concept key
      */
-    def getChildrenWithPatientCountsForConcept(String concept_key) {
+    def getChildrenWithPatientCountsForConcept(String concept_key, AuthUser user) {
         log.debug "----------------- getChildrenWithPatientCountsForConcept"
         log.debug "concept_key = " + concept_key
 
@@ -330,7 +330,7 @@ class I2b2HelperService {
             def node = conceptsResourceService.getByKey(concept_key)
             def List<OntologyTerm> childNodes = node.children
             for (OntologyTerm term: childNodes) {
-                counts.put(term.fullName,getObservationCountForXTrialsNode(term))
+                counts.put(term.fullName,getObservationCountForXTrialsNode(term, user))
             }
         } else {
             Sql sql = new Sql(dataSource);
@@ -933,9 +933,12 @@ class I2b2HelperService {
         return count
     }
 
-    def Integer getObservationCountForXTrialsNode(AcrossTrialsOntologyTerm term_node) {
+    def Integer getObservationCountForXTrialsNode(AcrossTrialsOntologyTerm term_node, AuthUser user) {
         log.debug "-------- start getObservationCountForXTrailsNode"
         log.debug "--------------------------- case: term_nade only"
+
+        def authStudies = getAuthorizedStudies(user)
+        def authStudiesString = getSqlInString(authStudies)
 
         def modifierList = []
         def leafNodes = getAllXTrailsLeafNodes(term_node)
@@ -954,7 +957,9 @@ class I2b2HelperService {
                 FROM 
                     observation_fact f
                     JOIN patient_dimension pd ON f.patient_num=pd.patient_num
+                    JOIN patient_trial pt ON pt.patient_num = f.patient_num
                 WHERE
+                    pt.trial IN (""" + authStudiesString + """) AND
                     f.modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
                     AND f.concept_cd != 'SECURITY'
                 ) as subjectList
