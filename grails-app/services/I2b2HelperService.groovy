@@ -330,7 +330,7 @@ class I2b2HelperService {
             def node = conceptsResourceService.getByKey(concept_key)
             def List<OntologyTerm> childNodes = node.children
             for (OntologyTerm term: childNodes) {
-                counts.put(term.fullName,getObservationCountForXTrailsNode(term))
+                counts.put(term.fullName,getObservationCountForXTrialsNode(term))
             }
         } else {
             Sql sql = new Sql(dataSource);
@@ -933,7 +933,7 @@ class I2b2HelperService {
         return count
     }
 
-    def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node) {
+    def Integer getObservationCountForXTrialsNode(AcrossTrialsOntologyTerm term_node) {
         log.debug "-------- start getObservationCountForXTrailsNode"
         log.debug "--------------------------- case: term_nade only"
 
