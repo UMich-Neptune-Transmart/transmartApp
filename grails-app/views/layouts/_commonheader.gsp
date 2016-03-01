@@ -33,8 +33,10 @@
                     <%--<g:if test="${'search'==app}"><th class="menuVisited">Search</th></g:if>
                     <g:else><th class="menuLink"><g:link controller="search">Search</g:link></th></g:else>--%>
 
+                <g:if test="${grailsApplication.config.com.recomdata.browseEnabled}">
                     <g:if test="${'rwg' == app}"><th class="menuVisited">Browse</th></g:if>
                     <g:else><th class="menuLink"><g:link controller="RWG">Browse</g:link></th></g:else>
+                </g:if>
 
                 <g:if test="${'datasetExplorer' == app}"><th class="menuVisited">Analyze</th></g:if>
                     <g:else><th class="menuLink"><g:link controller="datasetExplorer">Analyze</g:link></th></g:else>
