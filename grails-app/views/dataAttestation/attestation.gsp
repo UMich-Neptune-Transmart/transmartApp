@@ -28,17 +28,7 @@
         <img style="display: block; margin: 12px auto;" src="${resource(dir: 'images', file: grailsApplication.config.com.recomdata.largeLogo)}" alt="Transmart" />
         <center><h1>ATTENTION: Users of ${grailsApplication.config.com.recomdata.searchtool.appTitle}</h1></center>
         <div style="text-align: justify; margin: 18px;">
-        <p>
-            It is the responsibility of all users to protect the privacy of individuals who are subjects in the data; to not use or disclose the data other than as permitted; and to appropriately secure the data.</p>
-        <p>
-            By clicking “I agree” below, users agree to the following:
-		<ul style="list-style-type: square; list-style-position: outside; padding-left: 18px;">
-		<li>No attempt shall be made to link subject data to a participant.</li>
-		<li>Any disclosure of data, analysis, or results from tranSMART will follow the procedures outlined in the contract.</li>
-		<li>Further data analysis on hypotheses generated via tranSMART will be pursued by the RPC2 working groups.</li>
-		<li>As RPC2 data are continuously updated, there will be periodic, announced updates to the data in tranSMART, with resulting possible changes in analysis results.</li>
-		</ul>
-		</p>
+            ${grailsApplication.config.neptune.dataAttestationText}
         </div>
         <center>
             <g:form name="dataAttestation" method="post" id="dataAttestation">
