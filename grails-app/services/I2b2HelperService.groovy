@@ -5632,6 +5632,7 @@ class I2b2HelperService {
             ls.put(keyToPath(conceptkey), row.secure_obj_token);
             log.trace("@@found" + conceptkey);
         })
+        log.debug("getChildPathsWithTokensFromParentKey\n\tls = " + ls)
         return ls;
     }
 
@@ -5649,6 +5650,8 @@ class I2b2HelperService {
         } finally {
             sql.close()
         }
+
+        debug.debug("getSecureTokensForStudies: tokens =\n\t" + tokens)
 
         tokens
     }
@@ -5878,6 +5881,7 @@ class I2b2HelperService {
         })
         // for across trials - mark top level know with special token for downstream access control
         ls.put("\\Across Trials\\","EXP:ACROSS_TRIALS")
+        log.debug("getRootPathsWithTokens\n\t ls = " + ls)
         return ls;
     }
 
