@@ -8,7 +8,7 @@
         <g:each in="${tags}" var="tag">
             <tr class="prop">
                 <td valign="top" class="name"><g:message code="${'tag' + tag.tagtype}" default="${tag.tagtype}"/>:</td>
-                <td valign="top" class="value">${fieldValue(bean: tag, field: 'tag')}</td>
+                <td valign="top" class="value">${tag.tag}</td>
             </tr>
         </g:each>
     </table>
