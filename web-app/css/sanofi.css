@@ -378,7 +378,8 @@ table.menuDetail th.menuVisited {
 }
 
 .x-tree-node-disabled {
-    display: none;
+    /* display: none; */
+	visibility: hidden;
 }
 
 #navigateTermsPanel .defaultPathNode {
