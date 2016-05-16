@@ -114,7 +114,7 @@ class ChartController {
         log.trace(user.toString());
         def concept_key = params.concept_key;
         log.trace("Requested counts for parent_concept_path=" + concept_key);
-        def counts = i2b2HelperService.getChildrenWithPatientCountsForConcept(concept_key)
+        def counts = i2b2HelperService.getChildrenWithPatientCountsForConcept(concept_key, user)
         def access = i2b2HelperService.getChildrenWithAccessForUserNew(concept_key, user)
         log.trace("access:" + (access as JSON));
         log.trace("counts = " + (counts as JSON))
@@ -309,6 +309,7 @@ class ChartController {
      * Action to get the basic statistics for the subset comparison and render them
      */
     def basicStatistics = {
+        def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         log.debug("*******************Called basicStatistics action in ChartController")
         request.getSession().setAttribute("gridtable", null);
         log.trace("Clearing grid in basicstatistics")
@@ -452,7 +453,7 @@ class ChartController {
         pw.write("</td>");
         pw.write("<td><img src='" + graphURL7 + "' width=200 height=300 border=0 usemap='#" + filename7 + "'>");
         String rmodulesVersion = grailsApplication.mainContext.pluginManager.getGrailsPlugin('rdc-rmodules').version;
-        pw.write("<td valign='top'><div style='position:relative;left:-30px;'><a  href=\"javascript:showInfo('plugins/rdc-rmodules-$rmodulesVersion/help/boxplot.html');\"><img src=\"../images/information.png\"></a></div></td>");
+        pw.write("<td valign='top'><div style='position:relative;left:-30px;'><a  href=\"javascript:showInfo('plugins/rdc-rmodules-$rmodulesVersion/help/boxplot.html');\"><img src=\"${resource(dir:'images',file:'information.png')}\"></a></div></td>");
         //Should be dynamic to plugin!
         pw.write("</td><td align='center'>");
         if (s2 && l2.size() > 0) {
@@ -466,7 +467,7 @@ class ChartController {
         log.trace ("----------  gender data section  ----------")
 
         if (s1) {
-            HashMap<String, Integer> sexs1 = i2b2HelperService.getPatientDemographicDataForSubset("sex_cd", result_instance_id1);
+            HashMap<String, Integer> sexs1 = i2b2HelperService.getPatientDemographicDataForSubset("sex_cd", result_instance_id1, user);
             JFreeChart chart = createConceptAnalysisPieChart(hashMapToPieDataset(sexs1, "Sex"), "Sex");
             info7 = new ChartRenderingInfo(new StandardEntityCollection());
             filename7 = ServletUtilities.saveChartAsJPEG(chart, 200, 200, info7, request.getSession());
@@ -474,12 +475,12 @@ class ChartController {
             pw.write("<img src='" + graphURL7 + "' width=200 height=200 border=0 usemap='#" + filename7 + "'>");
             ChartUtilities.writeImageMap(pw, filename7, info7, false);
             //pw.write("<b>Sex</b>");
-            renderCategoryResultsHashMap(sexs1, "Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1), pw);
+            renderCategoryResultsHashMap(sexs1, "Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1, user), pw);
         }
 
         pw.write("</td><td width='50%' align='center'>");
         if (s2) {
-            HashMap<String, Integer> sexs2 = i2b2HelperService.getPatientDemographicDataForSubset("sex_cd", result_instance_id2);
+            HashMap<String, Integer> sexs2 = i2b2HelperService.getPatientDemographicDataForSubset("sex_cd", result_instance_id2, user);
             JFreeChart chart = createConceptAnalysisPieChart(hashMapToPieDataset(sexs2, "Sex"), "Sex");
             info7 = new ChartRenderingInfo(new StandardEntityCollection());
             filename7 = ServletUtilities.saveChartAsJPEG(chart, 200, 200, info7, request.getSession());
@@ -487,7 +488,7 @@ class ChartController {
             pw.write("<img src='" + graphURL7 + "' width=200 height=200 border=0 usemap='#" + filename7 + "'>");
             ChartUtilities.writeImageMap(pw, filename7, info7, false);
             //pw.write("<b>Sex</b>");
-            renderCategoryResultsHashMap(sexs2, "Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2), pw);
+            renderCategoryResultsHashMap(sexs2, "Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2, user), pw);
         }
 
         log.trace ("----------  race data section    ----------")
@@ -497,11 +498,11 @@ class ChartController {
 
         // get race statistics
         if (s1) {
-            raceResults1 = i2b2HelperService.getPatientDemographicDataForSubset("race_cd", result_instance_id1);
+            raceResults1 = i2b2HelperService.getPatientDemographicDataForSubset("race_cd", result_instance_id1, user);
             log.debug("raceResults1: " + raceResults1)
         }
         if (s2) {
-            raceResults2 = i2b2HelperService.getPatientDemographicDataForSubset("race_cd", result_instance_id2);
+            raceResults2 = i2b2HelperService.getPatientDemographicDataForSubset("race_cd", result_instance_id2, user);
             log.debug("raceResults2: " + raceResults2)
         }
 
@@ -551,7 +552,7 @@ class ChartController {
             pw.write("<img src='" + graphURL7 + "' width=300 height=200 border=0 usemap='#" + filename7 + "'>");
             ChartUtilities.writeImageMap(pw, filename7, info7, false);
             //pw.write("<b>Race</b>");
-            renderCategoryResultsHashMap(race1, "Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1), pw);
+            renderCategoryResultsHashMap(race1, "Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1, user), pw);
         }
 
         pw.write("</td><td width='50%' align='center'>");
@@ -566,7 +567,7 @@ class ChartController {
             pw.write("<img src='" + graphURL7 + "' width=300 height=200 border=0 usemap='#" + filename7 + "'>");
             ChartUtilities.writeImageMap(pw, filename7, info7, false);
             //pw.write("<b>Race</b>");
-            renderCategoryResultsHashMap(race2, "Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2), pw);
+            renderCategoryResultsHashMap(race2, "Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2, user), pw);
         }
 
         pw.write("</td></tr></table>");
@@ -631,6 +632,7 @@ class ChartController {
         String concept_key = params.concept_key;
         def result_instance_id1 = params.result_instance_id1;
         def result_instance_id2 = params.result_instance_id2;
+        def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
 
         /*which subsets are present? */
         boolean s1 = (result_instance_id1 == "" || result_instance_id1 == null) ? false : true;
@@ -644,8 +646,8 @@ class ChartController {
         if (table == null) {
 
             table = new ExportTableNew();
-            if (s1) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id1, "subset1");
-            if (s2) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id2, "subset2");
+            if (s1) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id1, "subset1", user);
+            if (s2) i2b2HelperService.addAllPatientDemographicDataForSubsetToTable(table, result_instance_id2, "subset2", user);
 
             List<String> keys = i2b2HelperService.getConceptKeysInSubsets(result_instance_id1, result_instance_id2);
             Set<String> uniqueConcepts = i2b2HelperService.getDistinctConceptSet(result_instance_id1, result_instance_id2);
@@ -656,8 +658,8 @@ class ChartController {
             for (int i = 0; i < keys.size(); i++) {
 
                 log.trace("adding concept data for " + keys.get(i));
-                if (s1) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id1);
-                if (s2) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id2);
+                if (s1) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id1, user);
+                if (s2) i2b2HelperService.addConceptDataToTable(table, keys.get(i), result_instance_id2, user);
             }
         }
         PrintWriter pw = new PrintWriter(response.getOutputStream());
@@ -679,8 +681,8 @@ class ChartController {
                 conceptKeys.add(concept_key);
 
             for (ck in conceptKeys) {
-                if (s1) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id1);
-                if (s2) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id2);
+                if (s1) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id1, user);
+                if (s2) i2b2HelperService.addConceptDataToTable(table, ck, result_instance_id2, user);
             }
         }
         pw.write(table.toJSONObject().toString(5));
@@ -733,17 +735,19 @@ class ChartController {
 
     private void renderPatientCountInfoTable(String result_instance_id1, String result_instance_id2, PrintWriter pw) {
         try {
+            def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
             int count1 = 0
             int count2 = 0
             int countCross = 0
             if (result_instance_id1) {
-                count1 = i2b2HelperService.getPatientSetSize(result_instance_id1)
+                log.debug("----------------------------- count summary")
+                count1 = i2b2HelperService.getPatientSetSize(result_instance_id1, user)
                 if (result_instance_id2) {
                     countCross = i2b2HelperService.getPatientSetIntersectionSize(result_instance_id1, result_instance_id2)
                 }
             }
             if (result_instance_id2) {
-                count2 = i2b2HelperService.getPatientSetSize(result_instance_id2)
+                count2 = i2b2HelperService.getPatientSetSize(result_instance_id2, user)
             }
             pw.write("<table width='100%'><tr><td align='center'><div class='smalltitle'><b>Subject Totals</b></div>");
             pw.write("<table class='analysis'>");
@@ -1046,6 +1050,7 @@ for (int i = 0; i < mapsize; i++)
     }
 
     private void renderConceptAnalysisNew(String concept_key, String result_instance_id1, String result_instance_id2, PrintWriter pw, HttpServletRequest request) {
+        def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         log.debug "----------------- start ChartController renderConceptAnalysisNew"
         try {
             log.debug("Rendering concept analysis for concept key: " + concept_key)
@@ -1285,7 +1290,7 @@ for (int i = 0; i < mapsize; i++)
                 ChartUtilities.writeImageMap(pw, filename, info, false);
                 pw.write("</td>");
                 String rmodulesVersion = grailsApplication.mainContext.pluginManager.getGrailsPlugin('rdc-rmodules').version;
-                pw.write("<td valign='top'><div style='position:relative;left:-10px;'><a  href=\"javascript:showInfo('plugins/rdc-rmodules-$rmodulesVersion/help/boxplot.html');\"><img src=\"../images/information.png\"></a></div></td>");
+                pw.write("<td valign='top'><div style='position:relative;left:-10px;'><a  href=\"javascript:showInfo('plugins/rdc-rmodules-$rmodulesVersion/help/boxplot.html');\"><img src=\"${resource(dir:'images',file:'information.png')}\"></a></div></td>");
                 //Should be dynamic to plugin!
                 pw.write("<td>")
                 pw.write("<table><tr><td>");
@@ -1341,7 +1346,7 @@ for (int i = 0; i < mapsize; i++)
                 String allTrialsKey = "All Trials"
 
                 if (s1) {
-                    results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1)
+                    results1ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id1, user)
                     results1 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id1)
                     height = 80 + 15 * results1.size()
                     studyList.addAll(results1ByTrial.keySet())
@@ -1352,7 +1357,7 @@ for (int i = 0; i < mapsize; i++)
                     }
                 }
                 if (s2) {
-                    results2ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id2)
+                    results2ByTrial = i2b2HelperService.getConceptDistributionDataForConceptByTrial(concept_key, result_instance_id2, user)
                     results2 = i2b2HelperService.getConceptDistributionDataForConcept(concept_key, result_instance_id2)
                     height = Math.max(80 + 15 * results2.size(),height)
                     for (String key: results2ByTrial.keySet()){
@@ -1397,11 +1402,11 @@ for (int i = 0; i < mapsize; i++)
                     pw.write("</td></tr>");
                     pw.write("<tr><td align='center'>");
                     if (s1) {
-                        renderCategoryResultsHashMap(results1,"Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1), pw);
+                        renderCategoryResultsHashMap(results1,"Subset 1", i2b2HelperService.getPatientSetSize(result_instance_id1, user), pw);
                     }
                     pw.write("</td><td align='center'>");
                     if (s2) {
-                        renderCategoryResultsHashMap(results2,"Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2), pw);
+                        renderCategoryResultsHashMap(results2,"Subset 2", i2b2HelperService.getPatientSetSize(result_instance_id2, user), pw);
                     }
                     pw.write("</td></tr>")
                     pw.write("<tr><td align=\"center\" colspan=2><p>")
