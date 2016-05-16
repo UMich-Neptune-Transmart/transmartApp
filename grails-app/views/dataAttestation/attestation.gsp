@@ -26,7 +26,7 @@
 <center>
     <div style="width: 400px; margin: 50px auto 50px auto;">
         <img style="display: block; margin: 12px auto;" src="${resource(dir: 'images', file: grailsApplication.config.com.recomdata.largeLogo)}" alt="Transmart" />
-        <center><h1>ATTENTION: Users of ${grailsApplication.config.com.recomdata.searchtool.appTitle}</h1></center>
+        <center><h1>ATTENTION: Users of ${grailsApplication.config.com.recomdata.appTitle}</h1></center>
         <div style="text-align: justify; margin: 18px;">
         <p>
             It is the responsibility of all users to protect the privacy of individuals who are subjects in the data; to not use or disclose the data other than as permitted; and to appropriately secure the data.</p>
