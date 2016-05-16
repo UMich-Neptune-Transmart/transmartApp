@@ -19,7 +19,7 @@
 
 <head>
     <meta name='layout' content='main' />
-    <title>RPC2 Data Attestation Agreement</title>
+    <title>${grailsApplication.config.com.recomdata.appTitle} Attestation Agreement</title>
 </head>
 <body>
 <g:javascript src="tracking/track.js" />
