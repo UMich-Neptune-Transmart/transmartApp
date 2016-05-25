@@ -53,17 +53,23 @@ class I2b2HelperService {
     /**
      * Gets a distribution of information from the patient dimention table for value columns
      */
-    def double[] getPatientDemographicValueDataForSubset(String col, String result_instance_id) {
+    def double[] getPatientDemographicValueDataForSubset(String col, String result_instance_id, AuthUser user) {
         checkQueryResultAccess result_instance_id
+
+        def authStudies = getAuthorizedStudies(user)
+        def authStudiesString = getSqlInString(authStudies)
 
         // NOTE: UGLY, UGLY CODE -  The sourcesystem_cd field, in the case that across trials data
         // exists, will be TrialId:SubjectId, where SubjectId is a unique subject id across trials.
         ArrayList<Double> values = new ArrayList<Double>()
         Set<String> idSet = new HashSet<String>()
         Sql sql = new Sql(dataSource)
-        String sqlt = """SELECT """ + col + """, sourcesystem_cd, patient_num
+        String sqlt = """SELECT """ + col + """, sourcesystem_cd, f.patient_num
             FROM patient_dimension f
-            WHERE patient_num IN (
+            JOIN patient_trial pt ON pt.patient_num = f.patient_num
+            WHERE
+            pt.trial IN (""" + authStudiesString + """) AND
+            f.patient_num IN (
                 select distinct patient_num
 			        from qt_patient_set_collection
 			        where result_instance_id = ?)""";
@@ -5477,8 +5483,9 @@ class I2b2HelperService {
      *  Gets the data associated with a value type concept from observation fact table
      * for display in a distribution histogram for a given subset
      */
-    def getConceptDistributionDataForValueConceptByTrial(String concept_key, String result_instance_id) {
+    def getConceptDistributionDataForValueConceptByTrial(String concept_key, String result_instance_id, AuthUser user) {
         log.debug "----------------- getConceptDistributionDataForValueConceptByTrial"
+
 
         checkQueryResultAccess result_instance_id
         log.trace "access assured"
@@ -5487,6 +5494,9 @@ class I2b2HelperService {
         log.trace "xTrialsCaseFlag = " + xTrialsCaseFlag
 
         def trialdata = [:];
+
+        def authStudies = getAuthorizedStudies(user)
+        def authStudiesString = getSqlInString(authStudies)
 
         if (result_instance_id != null && result_instance_id != "") {
             log.debug("Getting concept distribution data for value concept:" + concept_key);
@@ -5507,7 +5517,8 @@ class I2b2HelperService {
                     SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f
                         INNER JOIN PATIENT_TRIAL t ON f.PATIENT_NUM=t.PATIENT_NUM
                     WHERE modifier_cd = ?
-                        AND concept_cd != 'SECURITY'
+                        AND concept_cd != 'SECURITY' AND
+                        t.trial IN (""" + authStudiesString + """)
                         AND f.PATIENT_NUM IN (select distinct patient_num
                             from qt_patient_set_collection
                             where result_instance_id = ?)

@@ -359,11 +359,11 @@ class ChartController {
         log.trace("Getting age data")
         double[] values3 = s1 ?
                 i2b2HelperService.getPatientDemographicValueDataForSubset(
-                        "AGE_IN_YEARS_NUM", result_instance_id1) :
+                        "AGE_IN_YEARS_NUM", result_instance_id1, user) :
                 []
         double[] values4 = s2 ?
                 i2b2HelperService.getPatientDemographicValueDataForSubset(
-                        "AGE_IN_YEARS_NUM", result_instance_id2) :
+                        "AGE_IN_YEARS_NUM", result_instance_id2, user) :
                 []
 
         log.trace("Rendering age histograms")
@@ -1195,8 +1195,8 @@ for (int i = 0; i < mapsize; i++)
 
                 if (xTrialsFlag) {
                     // NOTE: as of this implementation there are no concept_cd values for xTrials data!
-                    if (s1) results1 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrial(concept_key, result_instance_id1)
-                    if (s2) results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrial(concept_key, result_instance_id2)
+                    if (s1) results1 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrial(concept_key, result_instance_id1, user)
+                    if (s2) results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrial(concept_key, result_instance_id2, user)
                 } else {
                     results1 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id1);
                     results2 = i2b2HelperService.getConceptDistributionDataForValueConceptByTrialByConcepts(childConcepts, result_instance_id2);
