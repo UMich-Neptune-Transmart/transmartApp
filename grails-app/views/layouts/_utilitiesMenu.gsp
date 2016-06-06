@@ -3,9 +3,8 @@
     function toggleMenu() {
         jQuery('#utilitiesMenu').fadeToggle();
     }
-
     jQuery(document).ready(function () {
-        jQuery('#main').click(function () {
+        jQuery('body').on('click', '#centerMainPanel', function () {
             jQuery('#utilitiesMenu').hide();
         });
     });
