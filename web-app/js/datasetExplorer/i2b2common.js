@@ -2179,6 +2179,10 @@ for(i=GLOBAL.NumOfQueryCriteriaGroupsAtStart+1;i<=GLOBAL.NumOfQueryCriteriaGroup
 function showCriteriaGroup(i)
 {
 	var e=document.getElementById("qcr"+i);
-    e.style.display="";
-	if(i>3){Ext.get("subsetdivider").dom.rowSpan=i+1;}
+    if (e.style.display != "") {
+		e.style.display = "";
+		if (i > 3) {
+			Ext.get("subsetdivider").dom.rowSpan = i + 1;
+		}
+	}
 }
