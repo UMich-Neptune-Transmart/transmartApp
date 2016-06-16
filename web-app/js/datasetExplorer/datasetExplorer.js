@@ -797,6 +797,9 @@ Ext.onReady(function () {
         // =======
         loadPlugin('dalliance-plugin', "/Dalliance/loadScripts", function () {
             loadDalliance(resultsTabPanel);
+			Ext.getCmp('dallianceBrowser').on('deactivate', function() {
+				document.title = 'Dataset Explorer';
+			});
         }).always(function () {
             // Keep loading order to prevent tabs shuffling
             if (GLOBAL.metacoreAnalyticsEnabled) {
@@ -805,6 +808,8 @@ Ext.onReady(function () {
                 });
             }
         });
+
+
 
         if (GLOBAL.galaxyEnabled == 'true') {
            resultsTabPanel.add(GalaxyPanel);
