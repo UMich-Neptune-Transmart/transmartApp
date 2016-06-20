@@ -377,10 +377,6 @@ table.menuDetail th.menuVisited {
 	color: #AAA;
 }
 
-.x-tree-node-disabled {
-    display: none;
-}
-
 #navigateTermsPanel .defaultPathNode {
 	background-color: #FEEEF8;	
 }
