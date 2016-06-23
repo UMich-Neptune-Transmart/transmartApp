@@ -47,7 +47,7 @@ class VCFExporterTests {
 
         play {
 
-            exporter.export(tabularResult, projection, outputStream, { true })
+            exporter.export(tabularResult, projection, { name, ext -> outputStream}, { true })
 
             // As the export is cancelled, 
             assert !outputStream.toString()
@@ -64,7 +64,7 @@ class VCFExporterTests {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream()
 
         play {
-            exporter.export(tabularResult, projection, outputStream)
+            exporter.export(tabularResult, projection, { name, ext -> outputStream })
 
             // Assert we have at least some text, in UTF-8 encoding
             String output = outputStream.toString("UTF-8")
@@ -79,14 +79,15 @@ class VCFExporterTests {
 
             // Check different chromosomal positions
             assert lines[4].startsWith(
-                    ["1", "100", "rs0010", "G", "", "50", "PASS"].join("\t"))
+                    ["1", "100", "rs0010", "G", ".", "50", "PASS"].join("\t"))
             assert lines[4].endsWith(
                     ["GT:DP", "0/0:3", "0/0:7"].join("\t"))
 
             assert lines[5].startsWith(
                     ["2", "190", ".", "A", "G", "90", "q10"].join("\t"))
             assert lines[5].endsWith(
-                    ["GT", "1/0", "0/0"].join("\t")) // Inversion of reference and alternatives
+                    // There is no T nucleotide anymore. That's why index was changed from 2 to 1.
+                    ["GT", "0/1", "1/1"].join("\t"))
 
             assert lines[6].startsWith(
                     ["X", "190", ".", "G", "A", "90", "PASS"].join("\t"))
@@ -111,7 +112,7 @@ class VCFExporterTests {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream()
 
         play {
-            exporter.export(tabularResult, projection, outputStream)
+            exporter.export(tabularResult, projection, { name, ext -> outputStream })
 
             // Assert we have at least some text, in UTF-8 encoding
             String output = outputStream.toString("UTF-8")
@@ -166,9 +167,9 @@ class VCFExporterTests {
                         ["allele1"  : 0, "allele2": 0,
                          "subjectId": sampleCodes[1], "subjectPosition": 2],
                 ], "row2": [
-                ["allele1"  : 0, "allele2": 1,
+                ["allele1"  : 0, "allele2": 2,
                  "subjectId": sampleCodes[0], "subjectPosition": 1],
-                ["allele1"  : 1, "allele2": 1,
+                ["allele1"  : 2, "allele2": 2,
                  "subjectId": sampleCodes[1], "subjectPosition": 2],
         ], "row3"        : [ // X chromosome
                              ["allele1"  : 0,
@@ -198,9 +199,9 @@ class VCFExporterTests {
                                  numberOfSamplesWithData: 2
                          ]],
                 "row2": [chromosome     : 2, position: 190, rsId: ".",
-                         referenceAllele: "G", alternativeAlleles: ["A"],
+                         referenceAllele: "A", alternativeAlleles: ["T", "G"],
                          quality        : 90, filter: "q10", infoFields: ["AA": 0, "NS": 100],
-                         format         : "GT", variants: "0/0\t0/0", cohortInfo: [
+                         format         : "GT", variants: "0/2\t2/2", cohortInfo: [
                         referenceAllele        : "A",
                         alternativeAlleles     : ["G"],
                         alleles                : ["A", "G"],

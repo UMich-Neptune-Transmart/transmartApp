@@ -19,7 +19,6 @@ public class ExportColumn {
     private String type;
     private String tooltip;
 
-
     public ExportColumn(String id, String label, String pattern, String type) {
         this.id = id;
         this.label = label;
@@ -27,7 +26,6 @@ public class ExportColumn {
         this.type = type;
         this.tooltip = label;
     }
-
 
     public ExportColumn(String id, String label, String pattern, String type, String tooltip) {
         this.id = id;
@@ -42,12 +40,12 @@ public class ExportColumn {
         json.put("name", id);
         json.put("header", label);
         json.put("tooltip", tooltip);
-        if (type != null && type.toLowerCase() == "number")
+
+        if (type != null && type.toLowerCase().equals("number"))
             json.put("type", "float");
         else
             json.put("type", "string");
         json.put("sortable", true);
-        json.put("width", 50);
         return json;
     }
 
@@ -64,15 +62,6 @@ public class ExportColumn {
 
             json.put("sType", typeOut);
         }
-        /*
-        if (width > 0)
-		{
-			json.put("sWidth", width.toString() + "px");
-		}
-		else
-		{
-			json.put("sWidth", "100px");
-		}*/
 
         return json;
     }

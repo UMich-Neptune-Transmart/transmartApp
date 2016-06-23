@@ -1,3 +1,4 @@
+import org.springframework.web.servlet.support.RequestContextUtils
 import org.transmart.searchapp.AccessLog
 import org.transmart.searchapp.AuthUser
 import DataAttestation
@@ -8,6 +9,13 @@ class UserLandingController {
      * Dependency injection for the springSecurityService.
      */
     def springSecurityService
+    def messageSource
+
+    private String getUserLandingPath() {
+        grailsApplication.config.with {
+            com.recomdata.defaults.landing ?: ui.tabs.browse.hide ? '/datasetExplorer' : '/RWG'
+        }
+    }
 
     def index = {
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
@@ -34,7 +42,12 @@ class UserLandingController {
     def agree = {
         new AccessLog(username: springSecurityService.getPrincipal().username, event: "Disclaimer accepted",
                 accesstime: new Date()).save()
-        redirect(uri: '/RWG')
+        if (springSecurityService.currentUser.changePassword) {
+            flash.message = messageSource.getMessage('changePassword', new Objects[0], RequestContextUtils.getLocale(request))
+            redirect(controller: 'changeMyPassword')
+        } else {
+            redirect(uri: userLandingPath)
+        }
     }
 
     def disagree = {
@@ -46,4 +59,5 @@ class UserLandingController {
     def checkHeartBeat = {
         render(text: "OK")
     }
+
 }

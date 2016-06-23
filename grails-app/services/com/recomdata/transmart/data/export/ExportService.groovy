@@ -23,9 +23,7 @@ class ExportService {
     def jobResultsService
     def asyncJobService
     def quartzScheduler
-
-    @Resource(name = CurrentUserBeanProxyFactory.BEAN_BAME)
-    def currentUser
+    def currentUserBean
 
 
     def createExportDataAsyncJob(params, userName) {
@@ -60,8 +58,7 @@ class ExportService {
      * Format of individual values of selectedSubsetDataTypeFiles:
      *{*   subset: subset<1|2>,
      *   dataTypeId: <data type>,
-     *   fileType: .<EXTENSION>,
-     *   gplId: <platform>
+     *   fileType: <EXTENSION>
      *}*
      * This method than builds a pointlessly deeply nested map for you!
      *
@@ -74,7 +71,7 @@ class ExportService {
         selectedCheckboxList.collect {
             JSON.parse(it.toString())
         }.each { Map checkbox ->
-            def fileType = checkbox.fileType[1..-1]
+            def fileType = checkbox.fileType
 
             if (!formats.containsKey(checkbox.subset)) {
                 formats[checkbox.subset] = [:]
@@ -86,10 +83,6 @@ class ExportService {
 
             if (!formats[checkbox.subset][checkbox.dataTypeId].containsKey(fileType)) {
                 formats[checkbox.subset][checkbox.dataTypeId][fileType] = []
-            }
-
-            if (checkbox.gplId) {
-                formats[checkbox.subset][checkbox.dataTypeId][fileType] << checkbox.gplId
             }
         }
 
@@ -105,23 +98,17 @@ class ExportService {
                 //The first item is the subset name.
                 currentSubset = checkboxItem.subset.trim().replace(" ", "")
                 if (null == subsetSelectedFilesMap.get(currentSubset)) {
-                    subsetSelectedFilesMap.put(currentSubset, ["STUDY"])
+                    subsetSelectedFilesMap.put(currentSubset, [])
                 }
             }
 
             if (checkboxItem.dataTypeId) {
                 //Second item is the data type.
-                String currentDataType = checkboxItem.dataTypeId.trim()
-                if (checkboxItem.gplId) {
-                    def jobDataType = currentDataType + checkboxItem.fileType.trim()
-                    if (!subsetSelectedFilesMap.get(currentSubset)?.contains(jobDataType)) {
-                        subsetSelectedFilesMap.get(currentSubset).push(jobDataType)
-                    }
-                } else if (checkboxItem.dataTypeId) {
-                    subsetSelectedFilesMap.get(currentSubset)?.push(currentDataType + checkboxItem.fileType.trim())
-                } else {
-                    subsetSelectedFilesMap.get(currentSubset)?.push(currentDataType)
+                String selectedFile = checkboxItem.dataTypeId.trim()
+                if (!(checkboxItem.fileType in ['.TSV', 'TSV'])) {
+                    selectedFile += checkboxItem.fileType
                 }
+                subsetSelectedFilesMap.get(currentSubset)?.push(selectedFile)
             }
         }
 
@@ -194,13 +181,8 @@ class ExportService {
         jdm.highDimDataTypes = getHighDimDataTypesAndFormats(checkboxList)
         jdm.put("subsetSelectedPlatformsByFiles", getsubsetSelectedPlatformsByFiles(checkboxList))
         jdm.put("checkboxList", checkboxList);
-        def checkedPlatforms = [params.selectedSubsetDataTypeFiles].flatten().collect { JSON.parse(it) }
-        jdm.put("subsetSelectedFilesMap", getSubsetSelectedFilesMap(checkedPlatforms))
-        Map gplIdsMap = [:].withDefault { [:].withDefault { [] as Set } }
-        checkedPlatforms.each { json ->
-            gplIdsMap[json.subset][json.dataTypeId] << json.gplId
-        }
-        jdm.put("gplIdsMap", gplIdsMap)
+        def checkedFileTypes = [params.selectedSubsetDataTypeFiles].flatten().collect { JSON.parse(it) }
+        jdm.put("subsetSelectedFilesMap", getSubsetSelectedFilesMap(checkedFileTypes))
         jdm.put("resulttype", "DataExport")
         jdm.put("studyAccessions", i2b2ExportHelperService.findStudyAccessions(resultInstanceIdHashMap.values().toArray()))
 
@@ -214,7 +196,7 @@ class ExportService {
         //This adds a step to the job to create a file link as the plugin output.
         jdm.put("renderSteps", ["FILELINK": ""]);
 
-        jdm.put("userInContext", currentUser.targetSource.target)
+        jdm.put("userInContext", currentUserBean.targetSource.target)
 
         def jobDetail = new JobDetail(params.jobName, params.analysis, GenericJobExecutor.class)
         jobDetail.setJobDataMap(jdm)
@@ -232,10 +214,6 @@ class ExportService {
 
         jobResultsService[params.jobName]["StatusList"] = statusList
         asyncJobService.updateStatus(params.jobName, statusList[0])
-
-        def al = new AccessLog(username: userName, event: "${params.analysis}, Job: ${params.jobName}",
-                eventmessage: "", accesstime: new java.util.Date())
-        al.save()
 
         //TODO get the required input parameters for the job and validate them
         def rID1 = RequestValidator.nullCheck(params.result_instance_id1)

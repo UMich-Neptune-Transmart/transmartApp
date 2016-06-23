@@ -33,6 +33,7 @@ import org.jfree.data.general.PieDataset
 import org.jfree.data.statistics.*
 import org.transmart.searchapp.AccessLog
 import org.transmart.searchapp.AuthUser
+import org.transmartproject.core.users.User
 
 import javax.servlet.ServletException
 import javax.servlet.ServletOutputStream
@@ -51,6 +52,8 @@ class ChartController {
 
     def i2b2HelperService
     def springSecurityService
+    def accessLogService
+    User currentUserBean
 
 
     def displayChart = {
@@ -193,6 +196,7 @@ class ChartController {
 
     def conceptDistributionForSubset = {
         String concept_key = params.concept_key;
+        def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         def al = new AccessLog(username: springSecurityService.getPrincipal().username, event: "DatasetExplorer-Set Value Concept Histogram for subset", eventmessage: "Concept:" + concept_key, accesstime: new java.util.Date())
         al.save()
         def result_instance_id1 = params.result_instance_id1;
@@ -201,7 +205,7 @@ class ChartController {
         def concept_name = i2b2HelperService.getShortNameFromKey(concept_key);
 
         if (result_instance_id1 != "" && result_instance_id1 != null) {
-            double[] values2 = i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1);
+            double[] values2 = i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1, user);
             double[] values = i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key);
             HistogramDataset dataset2 = new HistogramDataset();
             //changed following line from values2 min max to values to syncronize scales
@@ -693,6 +697,26 @@ class ChartController {
         request.getSession().setAttribute("gridtable", table);
     }
 
+    def reportGridTableExport() {
+
+        ExportTableNew gridTable = request.session.gridtable
+
+        def exportedVariablesCsv = gridTable.columnMap.entrySet()
+                .collectAll { "${it.value.label} (id = ${it.key})" }.join(', ')
+
+        def trialsCsv = gridTable.rows
+                .collectAll { it['TRIAL'] }.unique().join(', ')
+
+        accessLogService.report(currentUserBean, 'Grid View Data Export',
+                eventMessage: "User (IP: ${request.getHeader('X-FORWARDED-FOR') ?: request.remoteAddr}) just exported" +
+                        " data for tieal(s) (${trialsCsv}): variables (${exportedVariablesCsv}) measurements for the" +
+                        " folowing patients set(s): " +
+                        [params.result_instance_id1, params.result_instance_id2].findAll().join(', '),
+                requestURL: request.forwardURI)
+
+        render 'ok'
+    }
+
     def clearGrid = {
         log.trace("Clearing grid");
         request.getSession().setAttribute("gridtable", null);
@@ -1093,10 +1117,10 @@ for (int i = 0; i < mapsize; i++)
                 log.trace "----------------- before data fetch"
                 if (xTrialsFlag) {
                     // NOTE: as of this implementation there is no concept_cd value for xTrials data!
-                    if (s1) valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1));
-                    if (s2) valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2));
+                    if (s1) valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1, user));
+                    if (s2) valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2, user));
                 } else {
-                    /*get the data*/
+                /*get the data*/
                     String partentPath = i2b2HelperService.keyToPath(concept_key);
                     String parentConcept = i2b2HelperService.lookupParentConcept(partentPath);
                     log.trace("Get base concept: path = " + partentPath + ", concept = " + parentConcept)
@@ -1104,29 +1128,26 @@ for (int i = 0; i < mapsize; i++)
                     valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(concept_cd, result_instance_id1));
                     valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(concept_cd, result_instance_id2));
 
-                    if (parentConcept == null) {
-                        childConcepts.add(concept_cd);
-                    } else {
-                        childConcepts.addAll(i2b2HelperService.lookupChildConcepts(parentConcept, result_instance_id1, result_instance_id2));
-                    }
+                if (parentConcept == null) {
+                    childConcepts.add(concept_cd);
+                } else {
+                    childConcepts.addAll(i2b2HelperService.lookupChildConcepts(parentConcept, result_instance_id1, result_instance_id2));
+                }
 
                     log.trace("Iterating through child concepts");
-                    for (c in childConcepts) {
+                for (c in childConcepts) {
                         log.debug("\tconcept: " + c);
-                        valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id1));
+                    valuesAlist3.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id1));
                         log.trace("\tadded to values3");
-                        valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id2));
+                    valuesAlist4.addAll(i2b2HelperService.getConceptDistributionDataForValueConceptFromCode(c, result_instance_id2));
                         log.trace("\tadded to values4");
-                    }
+                }
 
                     log.trace("\tA done iterating through child concepts");
                 }
                 log.trace "----------------- after data fetch"
                 log.trace("valuesAlist3:" + valuesAlist3);
                 log.trace("valuesAlist4:" + valuesAlist4);
-
-                //double[] values3=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id1);
-                //double[] values4=i2b2HelperService.getConceptDistributionDataForValueConcept(concept_key, result_instance_id2);
 
                 double[] values3 = valuesAlist3.toArray();
                 double[] values4 = valuesAlist4.toArray();
@@ -1321,6 +1342,7 @@ for (int i = 0; i < mapsize; i++)
                 if ((results1 !=  null) && !results1.isEmpty() && (results2 != null) && !results2.isEmpty() )
                     renderTTestHashMap(results1, results2, pw);
 
+
                 if (s1 && results1.size() == 0) {
                     pw.write("No results found for either " + concept_name + " or equivalent concepts for subset 1.")
                 }
@@ -1364,6 +1386,7 @@ for (int i = 0; i < mapsize; i++)
                         // maintain order but avoid duplicates
                         if (!studyList.contains(key)) studyList.add(key);
                     }
+
                     if (results2ByTrial.size() > 1) {
                         results2ByTrial.put(allTrialsKey,results2)
                         // add it last; if needed

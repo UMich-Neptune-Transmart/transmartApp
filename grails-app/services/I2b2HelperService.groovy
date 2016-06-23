@@ -27,6 +27,11 @@ import javax.xml.xpath.XPathFactory
 import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Statement
+import java.net.URL;
+import java.net.MalformedURLException;
+
+import static org.transmartproject.db.ontology.AbstractAcrossTrialsOntologyTerm.ACROSS_TRIALS_TABLE_CODE
+import static org.transmartproject.db.ontology.AbstractAcrossTrialsOntologyTerm.ACROSS_TRIALS_TOP_TERM_NAME
 
 import static org.transmartproject.db.ontology.AbstractAcrossTrialsOntologyTerm.ACROSS_TRIALS_TABLE_CODE
 import static org.transmartproject.db.ontology.AbstractAcrossTrialsOntologyTerm.ACROSS_TRIALS_TOP_TERM_NAME
@@ -264,6 +269,7 @@ class I2b2HelperService {
             log.trace "isValueConceptKey returns " + xTrialsValueConcept
             return xTrialsValueConcept
         }
+
         def concept_code = getConceptCodeFromKey(concept_key)
         log.trace "concept_code: " + concept_code
         def ret = isValueConceptCode(concept_code)
@@ -345,6 +351,7 @@ class I2b2HelperService {
                 log.trace "Found " << row.concept_path
                 counts.put(row.concept_path, row.patient_count)
             });
+
         }
         return counts;
     }
@@ -376,7 +383,7 @@ class I2b2HelperService {
      *  Gets the data associated with a value type concept from observation fact table
      * for display in a distribution histogram for a given subset
      */
-    def getConceptDistributionDataForValueConcept(String concept_key, String result_instance_id) {
+    def getConceptDistributionDataForValueConcept(String concept_key, String result_instance_id, AuthUser user) {
         log.debug "----------------- getConceptDistributionDataForValueConcept"
         log.debug("Getting concept distribution data for value concept_key, " + concept_key + ", with results_instance_id = " + result_instance_id);
 
@@ -390,17 +397,15 @@ class I2b2HelperService {
 
         if (xTrialsCaseFlag) {
 
-            def data = fetchAcrossTrialsData(concept_key,result_instance_id)
+            def data = fetchAcrossTrialsData(concept_key,result_instance_id, user)
             data.each {
                 def subject = it.subject
                 def value = it.value
                 values.add(value)
             }
-
         } else {
             Sql sql = new Sql(dataSource);
             String concept_cd = getConceptCodeFromKey(concept_key);
-
             String sqlt = "SELECT NVAL_NUM FROM OBSERVATION_FACT f WHERE CONCEPT_CD = '" +
                     concept_cd + "' AND PATIENT_NUM IN (select distinct patient_num " +
                     "from qt_patient_set_collection where result_instance_id = " + result_instance_id + ")";
@@ -416,6 +421,7 @@ class I2b2HelperService {
             } catch (Exception e) {
                 log.error("exception in getConceptDistributionDataForValueConcept: " + e.getMessage())
             }
+
         }
 
         log.debug("getConceptDistributionDataForValueConcept now finished: returning values n = " + values.size());
@@ -459,7 +465,7 @@ class I2b2HelperService {
     }
 
     /**
-     *  Gets the count of a a patient set fromt he result instance id
+     *  Gets the count of a patient set from the result instance id
      */
     def Integer getPatientSetSize(String result_instance_id, AuthUser user) {
         checkQueryResultAccess result_instance_id
@@ -502,9 +508,11 @@ class I2b2HelperService {
         Integer i = 0;
         Sql sql = new Sql(dataSource);
 
+        // original code counted split_part(pd.sourcesystem_cd , ':', 2)
+        // but this is a postgres-only built-in function
         String sqlt = """Select count(*) as patcount
         FROM (
-                SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                SELECT DISTINCT pd.sourcesystem_cd AS subject_id
                 from
                 qt_patient_set_collection a
                 inner join qt_patient_set_collection b
@@ -630,7 +638,7 @@ class I2b2HelperService {
             log.trace("XTrials for getConceptDistributionDataForConcept")
             def List<OntologyTerm> childNodes = node.children
             for (OntologyTerm term: childNodes) {
-                results.put(term.name,getObservationCountForXTrailsNode(term,result_instance_id))
+                results.put(term.name,getObservationCountForXTrialsNode(term,result_instance_id))
             }
 
         } else {
@@ -671,7 +679,7 @@ class I2b2HelperService {
         def baseNode = conceptsResourceService.getByKey(concept_key)
         log.trace(baseNode.class.name)
 
-        def trials = trialsForResultSet(result_instance_id, user)
+        def List<String> trials = trialsForResultSet(result_instance_id)
         log.trace("trials = " + trials)
 
         if (xTrialsCaseFlag) {
@@ -680,7 +688,7 @@ class I2b2HelperService {
             def String modifier_cd = itemProbe.modifierDimension.code
             for (String trial: trials) {
                 log.trace("results for: " + trial + ", " + concept_key)
-                results.put(trial, getAllObservationCountsForXTrailsConceptNodeWithTrail(trial, concept_key, result_instance_id))
+                results.put(trial, getAllObservationCountsForXTrialsConceptNodeWithTrial(trial, concept_key, result_instance_id))
             }
 
         } else {
@@ -742,36 +750,22 @@ class I2b2HelperService {
         if (xTrialsCaseFlag) {
             log.warn("NOT IMPLEMENTED - XTrials for getConceptDistributionDataForConcept")
         } else {
-            // check to see if there is a mapping from this concept_key to a concept_key for the results
+        // check to see if there is a mapping from this concept_key to a concept_key for the results
             log.trace("looking up parent_concept of fullname: " + fullname)
-            String parent_concept = lookupParentConcept(fullname);
+        String parent_concept = lookupParentConcept(fullname);
             log.trace("parent_concept: " + parent_concept);
-            Set<String> concepts = new HashSet<String>();
-            if (parent_concept != null) {
-                // lookup appropriate children
-                Set<String> childConcepts = lookupChildConcepts(parent_concept, result_instance_id);
-                if (childConcepts.isEmpty()) {
-                    childConcepts.add(concept_key);
-                }
+        Set<String> concepts = new HashSet<String>();
+        if (parent_concept != null) {
+            // lookup appropriate children
+            Set<String> childConcepts = lookupChildConcepts(parent_concept, result_instance_id);
+            if (childConcepts.isEmpty()) {
+                childConcepts.add(concept_key);
+            }
                 log.trace("getConceptDistributionDataForConcept: childConcepts: " + childConcepts);
-                for (c in childConcepts) {
-                    int i = getLevelFromKey(concept_key) + 1;
-                    fullname = getConceptPathFromCode(c);
-                    log.trace("** IN LOOP: fullname: " + fullname);
-                    Sql sql = new Sql(dataSource);
-                    String sqlt =
-                            "SELECT DISTINCT c_name, c_fullname FROM i2b2metadata.i2b2 WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ? ORDER BY C_FULLNAME";
-                    log.trace(sqlt);
-                    sql.eachRow(sqlt, [fullname.asLikeLiteral() + "%", i], { row ->
-                        if (results.get(row[0]) == null) {
-                            results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
-                        } else {
-                            results.put(row[0], results.get(row[0]) + getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
-                        }
-                    })
-                }
-            } else {
+            for (c in childConcepts) {
                 int i = getLevelFromKey(concept_key) + 1;
+                fullname = getConceptPathFromCode(c);
+                    log.trace("** IN LOOP: fullname: " + fullname);
                 Sql sql = new Sql(dataSource);
                 String sqlt = "SELECT DISTINCT c_name, c_fullname FROM i2b2metadata.i2b2 WHERE C_FULLNAME LIKE ? escape '\\' AND c_hlevel = ? ORDER BY C_FULLNAME";
                 log.trace(sqlt);
@@ -779,6 +773,7 @@ class I2b2HelperService {
                     results.put(row[0], getObservationCountForConceptForSubset("\\blah" + row[1], result_instance_id));
                 });
             }
+        }
         }
         return results;
     }
@@ -840,11 +835,10 @@ class I2b2HelperService {
         return i;
     }
 
-    def HashMap<String, Integer> getAllObservationCountsForXTrailsConceptNodeWithTrail(String trial, String concept_key, String result_instance_id)  throws SQLException {
+    def HashMap<String, Integer> getAllObservationCountsForXTrialsConceptNodeWithTrial(String trial, String concept_key, String result_instance_id)  throws SQLException {
         checkQueryResultAccess result_instance_id
 
-        log.debug "------ getAllObservationCountsForXTrailsConceptNodeWithTrail"
-
+        log.debug "------ getAllObservationCountsForXTrialsConceptNodeWithTrial"
         def node = conceptsResourceService.getByKey(concept_key)
         def List<OntologyTerm> childNodes = node.children
 
@@ -857,10 +851,12 @@ class I2b2HelperService {
         log.trace "result_instance_id = " + result_instance_id
         log.trace "trial = " + trial
 
+        // original code counted split_part(pd.sourcesystem_cd , ':', 2)
+        // but this is a postgres-only built-in function
         def sqlt = """
             SELECT count(subject_id) as n, modifier_cd
             FROM (
-                SELECT DISTINCT modifier_cd, split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                SELECT DISTINCT modifier_cd, pd.sourcesystem_cd AS subject_id
                 FROM
                     observation_fact f
                     JOIN patient_dimension pd ON f.patient_num=pd.patient_num
@@ -872,8 +868,8 @@ class I2b2HelperService {
                         SELECT DISTINCT patient_num
                         FROM qt_patient_set_collection
                         WHERE result_instance_id = ?)
-                ) AS subject_data
-            group by modifier_cd
+                ) subject_data
+s            group by modifier_cd
         """
 
         log.trace sqlt
@@ -898,14 +894,14 @@ class I2b2HelperService {
         return results;
     }
 
-    def Integer getObservationCountForXTrailsNode(AcrossTrialsOntologyTerm term_node, String result_instance_id) {
-        log.debug "--------  start getObservationCountForXTrailsNode"
+    def Integer getObservationCountForXTrialsNode(AcrossTrialsOntologyTerm term_node, String result_instance_id) {
+        log.debug "--------  start getObservationCountForXTrialsNode"
         log.debug "---------- case: term_node and result_instance_id"
-        log.debug "tern_node.name = " + term_node.name
+        log.debug "term_node.name = " + term_node.name
         checkQueryResultAccess result_instance_id
 
         def modifierList = []
-        def leafNodes = getAllXTrailsLeafNodes(term_node)
+        def leafNodes = getAllXTrialsLeafNodes(term_node)
         leafNodes.each { node ->
             modifierList.add(node.code)
         }
@@ -915,10 +911,12 @@ class I2b2HelperService {
         log.trace "modifierList = " + modifierList
         log.trace "result_instance_id = " + result_instance_id
 
+        // original code counted split_part(pd.sourcesystem_cd , ':', 2)
+        // but this is a postgres-only built-in function
         def sqlt = """
             SELECT count(*) FROM (
-                SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
-                FROM 
+                SELECT DISTINCT pd.sourcesystem_cd AS subject_id
+                FROM
                     observation_fact f
                     JOIN patient_dimension pd ON f.patient_num=pd.patient_num
                 WHERE
@@ -927,10 +925,11 @@ class I2b2HelperService {
                     AND f.patient_num IN (select distinct patient_num
                         from qt_patient_set_collection
                         where result_instance_id = ?)
-                ) as subjectList
+                ) subjectList
         """
 
         int count = 0
+
         sql.eachRow(sqlt, [result_instance_id], { row ->
             count = row[0]
         })
@@ -947,20 +946,25 @@ class I2b2HelperService {
         def authStudiesString = getSqlInString(authStudies)
 
         def modifierList = []
-        def leafNodes = getAllXTrailsLeafNodes(term_node)
+        def leafNodes = getAllXTrialsLeafNodes(term_node)
+
         leafNodes.each { node ->
             modifierList.add(node.code)
         }
 
+        if (modifierList.isEmpty()) return 0
+        
         Sql sql = new Sql(dataSource)
 
         log.trace "For case NOT using result_instance_id"
         log.trace "modifierList = " + modifierList
 
+        // original code counted split_part(pd.sourcesystem_cd , ':', 2)
+        // but this is a postgres-only built-in function
         def sqlt = """
             SELECT count(*) FROM (
                 SELECT DISTINCT split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
-                FROM 
+                FROM
                     observation_fact f
                     JOIN patient_dimension pd ON f.patient_num=pd.patient_num
                     JOIN patient_trial pt ON pt.patient_num = f.patient_num
@@ -968,7 +972,7 @@ class I2b2HelperService {
                     pt.trial IN (""" + authStudiesString + """) AND
                     f.modifier_cd in ( """ + listToIN(modifierList.asList()) +  """ )
                     AND f.concept_cd != 'SECURITY'
-                ) as subjectList
+        ) as subjectList
         """
 
 		log.trace "sql text ="
@@ -983,7 +987,7 @@ class I2b2HelperService {
         return count
     }
 
-    def List<AcrossTrialsOntologyTerm> getAllXTrailsLeafNodes(AcrossTrialsOntologyTerm top){
+    def List<AcrossTrialsOntologyTerm> getAllXTrialsLeafNodes(AcrossTrialsOntologyTerm top){
         List<AcrossTrialsOntologyTerm> nodes = new ArrayList<AcrossTrialsOntologyTerm>()
 
         if (isLeafConceptKey(top)) {
@@ -992,7 +996,7 @@ class I2b2HelperService {
         }
 
         top.children.each { child ->
-            nodes.addAll(getAllXTrailsLeafNodes(child))
+            nodes.addAll(getAllXTrialsLeafNodes(child))
         }
 
         return nodes
@@ -1023,8 +1027,9 @@ class I2b2HelperService {
                         select distinct patient_num
                         from qt_patient_set_collection
                         where result_instance_id = ?)
-            ) as subjectList
+            ) subjectList
         """
+        log.trace(sqlt);
         sql.eachRow(sqlt, [
                 fullnameLike,
                 result_instance_id
@@ -1041,7 +1046,7 @@ class I2b2HelperService {
     def ExportTableNew addAllPatientDemographicDataForSubsetToTable(ExportTableNew tablein, String result_instance_id, String subset, AuthUser user) {
         checkQueryResultAccess result_instance_id
 
-        log.trace("Getting sampleCD's for paitent number")
+        log.trace("Getting sampleCD's for patient number")
         def mapOfSampleCdsByPatientNum = buildMapOfSampleCdsByPatientNum(result_instance_id)
 
         def authStudies = getAuthorizedStudies(user)
@@ -1205,7 +1210,6 @@ class I2b2HelperService {
         String columnname = getColumnNameFromKey(concept_key).replace(" ", "_")
         String columntooltip = keyToPath(concept_key).replaceAll('[^a-zA-Z0-9_\\-\\\\]+','_')
 
-
         if (leafConceptFlag) {
             log.debug "----------------- this is a Leaf Node"
 
@@ -1230,7 +1234,6 @@ class I2b2HelperService {
             else {
                 insertConceptDataIntoTable(columnid, concept_key, result_instance_id, valueLeafNodeFlag, tablein)
             }
-
         } else {
             // If a folder is dragged in, we want the contents of the folder to be added to the data
             // That is possible if the folder contains only categorical values and no subfolders.
@@ -1271,7 +1274,7 @@ class I2b2HelperService {
             }
 
             if (xTrialsCaseFlag) {
-                log.trace "----------------- this is Folder Node - xTrails case"
+                log.trace "----------------- this is Folder Node - xTrials case"
                 item.children.each { child ->
                     log.trace "Child key code: " + child.key
                     def valueLeafNodeFlag = false
@@ -1504,12 +1507,13 @@ class I2b2HelperService {
 
         String sqlt = """SELECT cat, COUNT(subject_id) as demcount
         FROM (
-                SELECT DISTINCT UPPER("""+ col + """) as cat, split_part(pd.sourcesystem_cd , ':', 2) AS subject_id
+                SELECT DISTINCT UPPER("""+ col + """) as cat, pd.sourcesystem_cd AS subject_id
                 FROM qt_patient_set_collection ps
                 JOIN patient_dimension pd
                 ON ps.patient_num=pd.patient_num AND result_instance_id = ?
                 JOIN patient_trial pt ON pt.patient_num = ps.patient_num
                 WHERE pt.trial IN (""" + authStudiesString + """)
+
         ) base
         GROUP BY cat
         """;
@@ -1858,7 +1862,6 @@ class I2b2HelperService {
 
         //This is the SQL statement we run.
         String sqlt = "select distinct PATIENT_ID from DE_SUBJECT_SAMPLE_MAPPING where SAMPLE_ID in (" + listToIN(SampleIDList) + ")";
-
         sql.eachRow(sqlt, [], { row -> subjectIds.add(row.PATIENT_ID); })
 
         return subjectIds;
@@ -2406,7 +2409,6 @@ class I2b2HelperService {
                         concepts1, concepts2, timepoint1, timepoint2, rbmPanels1, rbmPanels2);
                 log.debug("RBM heatmap query: " + query);
                 Sql sql = new Sql(dataSource);
-
                 def rowsObj = sql.rows(query, numColumnsClosure)
 
                 // create header
@@ -3148,7 +3150,7 @@ class I2b2HelperService {
         Map<String, String> conceptIdToDisplayNameMap = new HashMap<String, String>();
 
         // Get the dataset list from subject lists, and organize them in pairs for each patient.
-        String commonPlatformName = null;    // To make sure there is noly one platform among all the datasets
+        String commonPlatformName = null;    // To make sure there is only one platform among all the datasets
         String commonTrialName = null;    // For now only one trial is allowed.
 
         Sql sql = new Sql(dataSource);
@@ -4398,7 +4400,6 @@ class I2b2HelperService {
         StringBuilder sampleQ = new StringBuilder("SELECT distinct s.SAMPLE_TYPE_CD FROM de_subject_sample_mapping s WHERE s.CONCEPT_CODE IN ").append(convertStringToken(concepts));
 
         log.debug("getSampleTypes used this query: " + sampleQ.toString());
-
         sql.eachRow(sampleQ.toString(), { row ->
             String st = row.sample_type_cd;
             if (st != null && st.trim().length() > 0) {
@@ -5537,9 +5538,9 @@ class I2b2HelperService {
                 })
             } else {
 
-                String concept_cd = getConceptCodeFromKey(concept_key);
-                //ArrayList<Double> values=new ArrayList<Double>();
-                String sqlt = """SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f  INNER JOIN PATIENT_TRIAL t
+            String concept_cd = getConceptCodeFromKey(concept_key);
+            //ArrayList<Double> values=new ArrayList<Double>();
+            String sqlt = """SELECT TRIAL, NVAL_NUM FROM OBSERVATION_FACT f  INNER JOIN PATIENT_TRIAL t
 			    ON f.PATIENT_NUM=t.PATIENT_NUM WHERE CONCEPT_CD = ? AND
 			    f.PATIENT_NUM IN (select distinct patient_num from qt_patient_set_collection
 				where result_instance_id = ?)""";
@@ -5559,6 +5560,7 @@ class I2b2HelperService {
             }
 
         }
+
         log.debug "----------------- end getConceptDistributionDataForValueConceptByTrial"
         return trialdata;
     }
@@ -5584,7 +5586,6 @@ class I2b2HelperService {
 					where result_instance_id=""" + result_instance_id + """) """;
 
             log.trace("about to execute query: " + sqlt);
-
             sql.eachRow(sqlt,
                     { row ->
                         if (row.NVAL_NUM != null) {
@@ -5605,7 +5606,7 @@ class I2b2HelperService {
     /**
      *  check whether the current use is permitted to view Across Trials data
      */
-    def currentUserHasAcrossTrailsAccess(){
+    def currentUserHasAcrossTrialsAccess(){
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         return isXTrialsRole(user);
     }
@@ -5673,14 +5674,14 @@ class I2b2HelperService {
         return ls;
     }
 
-    Map<String, String> getSecureTokensForStudies(Collection<String> sdudyIds) {
-        if (!sdudyIds) return [:]
+    Map<String, String> getSecureTokensForStudies(Collection<String> studyIds) {
+        if (!studyIds) return [:]
 
         Sql sql = new Sql(dataSource)
         def tokens = [:]
         try {
             sql.eachRow("""
-                SELECT sourcesystem_cd, secure_obj_token FROM i2b2metadata.i2b2_SECURE WHERE sourcesystem_cd IN  (""" + listToIN(sdudyIds.asList()) + """) AND c_hlevel = 1
+                SELECT sourcesystem_cd, secure_obj_token FROM i2b2metadata.i2b2_SECURE WHERE sourcesystem_cd IN  (""" + listToIN(studyIds.asList()) + """) AND c_hlevel = 1
             """, { row ->
                 tokens += [(row.sourcesystem_cd): row.secure_obj_token]
             })
@@ -5717,8 +5718,9 @@ class I2b2HelperService {
     def getChildrenWithAccessForUserNew(String concept_key, AuthUser user) {
         log.debug "----------------- getChildrenWithAccessForUserNew"
 
-        def xTrailsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
-        def xTrialsCaseFlag = isXTrialsConcept(concept_key) || (concept_key == xTrailsTopNode)
+
+        def xTrialsTopNode = "\\\\" + ACROSS_TRIALS_TABLE_CODE + "\\" + ACROSS_TRIALS_TOP_TERM_NAME + "\\"
+        def xTrialsCaseFlag = isXTrialsConcept(concept_key) || (concept_key == xTrialsTopNode)
 
         def results = [:]
 
@@ -5735,9 +5737,10 @@ class I2b2HelperService {
                 results.put(term.fullName, 'view')
             }
         } else {
-            def children = getChildPathsWithTokensFromParentKey(concept_key);
+
+        def children = getChildPathsWithTokensFromParentKey(concept_key);
             results =  getAccess(children, user)
-        }
+    }
         return results
     }
 
@@ -5960,6 +5963,7 @@ class I2b2HelperService {
         // for across trials - mark top level know with special token for downstream access control
         ls.put("\\Across Trials\\","EXP:ACROSS_TRIALS")
         log.debug("getRootPathsWithTokens\n\t ls = " + ls)
+
         return ls;
     }
 
@@ -6424,6 +6428,7 @@ class I2b2HelperService {
         }
         return authTrials
     }
+
 }
 
 class SurvivalConcepts {

@@ -30,37 +30,49 @@
                    align="right"><!-- Use minimum possible width -->
                 <tr>
                     <th width="150">&nbsp;</th>
-                    <%--<g:if test="${'search'==app}"><th class="menuVisited">Search</th></g:if>
-                    <g:else><th class="menuLink"><g:link controller="search">Search</g:link></th></g:else>--%>
-                     <g:if test="${grailsApplication.config.com.recomdata.browseEnabled}">
-                         <g:if test="${'rwg' == app}"><th class="menuVisited">Browse</th></g:if>
-                         <g:else><th class="menuLink"><g:link controller="RWG">Browse</g:link></th></g:else>
-                     </g:if>
-                     <g:if test="${'datasetExplorer' == app}"><th class="menuVisited">Analyze</th></g:if>
-                         <g:else><th class="menuLink"><g:link controller="datasetExplorer">Analyze</g:link></th></g:else>
+                    <%--See Config.groovy--%>
+                    <g:if test="${grailsApplication.config.ui.tabs.search.show}">
+                        <g:if test="${'search'==app}"><th class="menuVisited">Search</th></g:if>
+                        <g:else><th class="menuLink"><g:link controller="search">Search</g:link></th></g:else>
+                    </g:if>
 
-     <%-- The flag doesn't appear to be working. Removing from Neptune version.
-     <g:if test="${grailsApplication.config.com.recomdata.hideSampleExplorer != 'true'}">
-                 <g:if test="${'sampleexplorer' == app}"><th class="menuVisited">Sample Explorer</th></g:if>
-                 <g:else><th class="menuLink"><g:link
-                         controller="sampleExplorer">Sample Explorer</g:link></th></g:else>
-             </g:if>--%>
+                    <g:if test="${!grailsApplication.config.ui.tabs.browse.hide}">
+                        <g:if test="${'rwg' == app}"><th class="menuVisited">Browse</th></g:if>
+                        <g:else><th class="menuLink"><g:link controller="RWG">Browse</g:link></th></g:else>
+                    </g:if>
+                    <%--Analyze tab is always visible--%>
+                    <g:if test="${'datasetExplorer' == app}"><th class="menuVisited">Analyze</th></g:if>
+                    <g:else><th class="menuLink"><g:link controller="datasetExplorer">Analyze</g:link></th></g:else>
 
-        <g:if test="${'genesignature' == app}"><th class="menuVisited">Gene&nbsp;Signature/Lists</th></g:if>
-        <g:else><th class="menuLink"><g:link
-                controller="geneSignature">Gene&nbsp;Signature/Lists</g:link></th></g:else>
-<%-- Removing from Neptune version.
-        <g:if test="${'gwas' == app}"><th class="menuVisited">GWAS</th></g:if>
-        <g:else><th class="menuLink"><g:link controller="GWAS">GWAS</g:link></th></g:else>
+                    <g:if test="${!grailsApplication.config.ui.tabs.sampleExplorer.hide}">
+                        <g:if test="${'sampleexplorer' == app}"><th class="menuVisited">Sample Explorer</th></g:if>
+                        <g:else><th class="menuLink"><g:link controller="sampleExplorer">Sample Explorer</g:link></th></g:else>
+                    </g:if>
 
-        <g:if test="${'uploaddata' == app}"><th class="menuVisited">Upload Data</th></g:if>
-        <g:else><th class="menuLink"><g:link controller="uploadData">Upload Data</g:link></th></g:else>
- --%>
+                    <g:if test="${!grailsApplication.config.ui.tabs.geneSignature.hide}">
+                        <g:if test="${'genesignature' == app}"><th class="menuVisited">Gene&nbsp;Signature/Lists</th></g:if>
+                        <g:else><th class="menuLink"><g:link controller="geneSignature">Gene&nbsp;Signature/Lists</g:link></th></g:else>
+                    </g:if>
 
-        <sec:ifAnyGranted roles="ROLE_ADMIN">
-            <g:if test="${'accesslog' == app}"><th class="menuVisited">Admin</th></g:if>
-            <g:else><th class="menuLink"><g:link controller="accessLog">Admin</g:link></th></g:else>
-        </sec:ifAnyGranted>
+                    <g:if test="${!grailsApplication.config.ui.tabs.gwas.hide}">
+                        <g:if test="${'gwas' == app}"><th class="menuVisited">GWAS</th></g:if>
+                        <g:else><th class="menuLink"><g:link controller="GWAS">GWAS</g:link></th></g:else>
+                    </g:if>
+
+                    <g:if test="${grailsApplication.config.ui.tabs.uploadData.show}">
+                        <g:if test="${'uploaddata' == app}"><th class="menuVisited">Upload GWAS</th></g:if>
+                        <g:else><th class="menuLink"><g:link controller="uploadData">Upload GWAS</g:link></th></g:else>
+                    </g:if>
+
+                    <sec:ifAnyGranted roles="ROLE_ADMIN">
+                        <g:if test="${'accesslog' == app}"><th class="menuVisited">Admin</th></g:if>
+                        <g:else><th class="menuLink"><g:link controller="accessLog">Admin</g:link></th></g:else>
+                    </sec:ifAnyGranted>
+
+                    <tmpl:/layouts/utilitiesMenu/>
+                </tr>
+            </table>
+        </th>
 
         <tmpl:/layouts/utilitiesMenu/>
     </tr>
@@ -93,3 +105,6 @@ logoutURL : "${createLink([controller: 'login', action: 'forceAuth'])}"
 });
 });
 </r:script>
+<!-- The below script fragment provided by JIRA to report bugs at jira.transmartfoundation.org -->
+<script type="text/javascript" src="https://jira.transmartfoundation.org/s/8c444fcd9d47fdf56ca2f75ec1e9fd15-T/en_GBh7pwdp/70120/0cff1430a886a90ec539aa112db8aee1/2.0.8/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-GB&collectorId=8d56c6a7"></script>
+
