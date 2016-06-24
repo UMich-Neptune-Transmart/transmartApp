@@ -679,7 +679,7 @@ class I2b2HelperService {
         def baseNode = conceptsResourceService.getByKey(concept_key)
         log.trace(baseNode.class.name)
 
-        def List<String> trials = trialsForResultSet(result_instance_id)
+        def List<String> trials = trialsForResultSet(result_instance_id, user)
         log.trace("trials = " + trials)
 
         if (xTrialsCaseFlag) {
@@ -869,7 +869,7 @@ class I2b2HelperService {
                         FROM qt_patient_set_collection
                         WHERE result_instance_id = ?)
                 ) subject_data
-s            group by modifier_cd
+            group by modifier_cd
         """
 
         log.trace sqlt
