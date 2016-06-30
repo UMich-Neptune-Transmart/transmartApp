@@ -74,8 +74,7 @@ span.utilMenuSeparator {
 }
 </style>
 <th class="menuLink" style="width: 100px; text-align: right">
-    <a href="#" onclick="toggleMenu();
-    return false;" id="utilitiesMenuButton">Utilities</a>
+    <a href="#" onclick="toggleMenu();return false;" id="utilitiesMenuButton">Utilities</a>
 </th>
 
 <g:set var="buildNumber"><g:meta name="environment.BUILD_NUMBER"/></g:set>

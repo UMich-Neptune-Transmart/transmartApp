@@ -73,8 +73,6 @@
                 </tr>
             </table>
         </th>
-
-        <tmpl:/layouts/utilitiesMenu/>
     </tr>
 </table>
 </th>

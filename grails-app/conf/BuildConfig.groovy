@@ -78,7 +78,7 @@ grails.project.dependency.resolution = {
         }
         compile 'org.rosuda:Rserve:1.7.3'
         compile 'com.google.guava:guava:14.0.1'
-        compile 'net.sf.ehcache:ehcache:2.9.0'
+        //compile 'net.sf.ehcache:ehcache:2.9.0'
 
         compile 'org.apache.httpcomponents:httpclient:4.2.4'
         compile 'org.apache.solr:solr-solrj:5.4.1'
@@ -139,8 +139,8 @@ grails.project.dependency.resolution = {
         compile ":codenarc:0.21"
 
         if (!dm) {
-            compile ':rdc-rmodules:16.1'
-            runtime ':transmart-core:16.1'
+            //compile ':rdc-rmodules:16.1'
+            //runtime ':transmart-core:16.1'
             compile ':transmart-gwas:16.1'
             //// already included in transmart-gwas
             //compile ':transmart-legacy-db:16.1'
@@ -208,5 +208,3 @@ codenarc.reports = {
         title = 'transmartApp Report'
     }
 }
-
-// vim: set et ts=4 sw=4:

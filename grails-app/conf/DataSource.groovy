@@ -11,15 +11,6 @@ dataSource_oauth2 {
     formatSql = true
 }
 
-hibernate {
-    cache.use_query_cache        = true
-    cache.use_second_level_cache = true
-
-    // make sure hibernate.cache.provider_class is not being set
-    // see http://stackoverflow.com/a/3690212/127724 and the docs for the cache-ehcache plugin
-    cache.region.factory_class   = 'grails.plugin.cache.ehcache.hibernate.BeanEhcacheRegionFactory'
-}
-
 environments {
     test {
         dataSource {
@@ -42,9 +33,13 @@ environments {
             formatSql = true
         }
 
-        hibernate {
-            cache.use_second_level_cache = true
-            cache.use_query_cache = false
-        }
+    }
+}
+
+if (hibernate.cache.region.factory_class != 'grails.plugin.cache.ehcache.hibernate.BeanEhcacheRegionFactory') {
+    hibernate {
+        cache.use_query_cache        = true
+        cache.use_second_level_cache = true
+        cache.provider_class         = 'org.hibernate.cache.EhCacheProvider'
     }
 }
