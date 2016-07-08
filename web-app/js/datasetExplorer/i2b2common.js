@@ -547,16 +547,18 @@ if(GLOBAL.CurrentSubsetIDs[subset]!=null) //check if its already been invalidate
 
 function clearAnalysisPanel()
 {
-var cleartxt="<div style='text-align:center;font:12pt arial;width:100%;height:100%;'><table style='width:100%;height:100%;'><tr><td align='center' valign='center'>Drag concepts to this panel to view a breakdown of the subset by that concept</td></tr></table></div>";
-var cleartxt2="<div style='text-align:center;font:12pt arial;width:100%;height:100%;'><table style='width:100%;height:100%;'><tr><td align='center' valign='center'>Select Advanced->Haploview from the menu</td></tr></table></div>";
-updateAnalysisPanel(cleartxt, false);
- var ag=Ext.getCmp("analysisGridPanel");
- if (typeof(ag) !== "undefined") {
-	 ag.body.update("<div></div>");
- }
- var aog=Ext.getCmp("analysisOtherPanel");
- if(aog) aog.body.update(cleartxt2);
- clearGrid(); 
+	var cleartxt="<div style='text-align:center;font:12pt arial;width:100%;height:100%;'><table style='width:100%;height:100%;'><tr><td align='center' valign='center'>Drag concepts to this panel to view a breakdown of the subset by that concept</td></tr></table></div>";
+	var cleartxt2="<div style='text-align:center;font:12pt arial;width:100%;height:100%;'><table style='width:100%;height:100%;'><tr><td align='center' valign='center'>Select Advanced->Haploview from the menu</td></tr></table></div>";
+	updateAnalysisPanel(cleartxt, false);
+
+	if(GLOBAL.gridViewEnabled) {
+		var ag = Ext.getCmp("analysisGridPanel");
+		ag.body.update("<div></div>");
+	}
+
+ 	var aog=Ext.getCmp("analysisOtherPanel");
+ 	if(aog) aog.body.update(cleartxt2);
+ 	clearGrid();
 }
 
 function clearGrid()

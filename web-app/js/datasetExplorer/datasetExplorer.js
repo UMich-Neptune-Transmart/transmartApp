@@ -567,7 +567,7 @@ Ext.onReady(function () {
         // Data Exports
         // ************
 
-		if (dataExportEnabled) {
+		if (GLOBAL.dataExportEnabled) {
             analysisDataExportPanel = new Ext.Panel(
                     {
                         id : 'analysisDataExportPanel',
@@ -654,7 +654,7 @@ Ext.onReady(function () {
         // ******************
         // Export Jobs
         // ******************
-        if (dataExportEnabled) {
+        if (GLOBAL.dataExportEnabled) {
             analysisExportJobsPanel = new Ext.Panel(
                 {
                     id: 'analysisExportJobsPanel',
@@ -738,11 +738,11 @@ Ext.onReady(function () {
 
         resultsTabPanel.add(queryPanel);
 		resultsTabPanel.add(analysisPanel);
-        if (gridViewEnabled) {
+		if (GLOBAL.gridViewEnabled) {
             resultsTabPanel.add(analysisGridPanel);
         }
         resultsTabPanel.add(dataAssociationPanel);
-		if (dataExportEnabled) {
+		if (GLOBAL.dataExportEnabled) {
             resultsTabPanel.add(analysisDataExportPanel);
             resultsTabPanel.add(analysisExportJobsPanel);
         }
@@ -1845,8 +1845,7 @@ function setupDragAndDrop() {
 		return true;
 	}
 
-    if (gridViewEnabled) {
-        /* set up drag and drop for grid */
+	if (GLOBAL.gridViewEnabled) {        /* set up drag and drop for grid */
         var mcd = Ext.get(analysisGridPanel.body);
         dtg = new Ext.dd.DropTarget(mcd,
             {
@@ -4062,9 +4061,7 @@ function ontFilterLoaded(el, success, response, options) {
 
 function clearQuery() {
     if (confirm("Are you sure you want to clear your current analysis?")) {
-        if (gridViewEnabled) {
-            clearAnalysisPanel();
-        }
+		clearAnalysisPanel();
         resetQuery();
         clearDataAssociation();
     }
