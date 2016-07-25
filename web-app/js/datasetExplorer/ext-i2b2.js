@@ -32,28 +32,10 @@ Ext.ux.OntologyTreeLoader = Ext.extend(Ext.tree.TreeLoader, {
         node.beginUpdate();
         //node.appendChild(nodes);
         this.parseJson(response, node);
-        //getChildConceptPatientCounts(node);
-	if(node.attributes.cls == 'fileFolderNode') {
-            FM.addFileNodes(this, response, node, callback);
-            node.endUpdate();
-	    if (typeof callback == "function") {
-	        callback(this, node);
-	    }
-    	}
-    	else {
-	    if (node.attributes.level == 1) {
-	        FM.handleFolderHasFilesRequest(this, response, node, callback);
-	    }
-	        
-	    else {
-                //parseJson(response, node);
-	        getChildConceptPatientCounts(node);
-		//this.endAppending(node, callback);
-	    }
-	    node.endUpdate();
-	    if (typeof callback == "function") {
-	        callback(this, node);
-	    }
+        getChildConceptPatientCounts(node);
+        node.endUpdate();
+        if (typeof callback == "function") {
+            callback(this, node);
         }
     },
 
@@ -81,7 +63,7 @@ Ext.ux.OntologyTreeLoader = Ext.extend(Ext.tree.TreeLoader, {
                     continue;
                 }
             }
-   		 
+
             //If the node has been disabled, ignore all children
             if (!node.disabled) {
                 node.appendChild(c);
@@ -121,7 +103,7 @@ function parseJson (response, node) {
             if(c.attributes.level <= '1' && GLOBAL.PathToExpand != '' && GLOBAL.PathToExpand.indexOf(c.attributes.id) == -1) {
                 //However, don't filter studies/top folders out if a higher-level match exists
                 var highLevelMatchFound = false;
-                for (var j = 0; j < matchList.size()-1; j++) { //-1 here - leave out last result (trailing comma)	
+                for (var j = 0; j < matchList.size()-1; j++) { //-1 here - leave out last result (trailing comma)
                     if (c.id.startsWith(matchList[j]) && c.id != matchList[j]) {
                         highLevelMatchFound = true;
                         break;
@@ -131,13 +113,13 @@ function parseJson (response, node) {
                     continue;
                 }
             }
-   		 
+
             //If the node has been disabled, ignore all children
             if (!node.disabled) {
                 node.appendChild(c);
             }
         }
-        
+
  }
 
  function handleFolderHasFilesRequest (source, originalResponse, node, callback) {
@@ -164,7 +146,7 @@ function getConceptPatientCountComplete(result, node) {
 }
 
 function getChildConceptPatientCounts(node) {
-	
+
 var params =	Ext.urlEncode({charttype:"childconceptpatientcounts",
 		   concept_key: node.attributes.id});
 
