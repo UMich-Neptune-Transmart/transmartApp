@@ -1,4 +1,4 @@
-
+import org.springframework.web.servlet.support.RequestContextUtils
 import org.transmart.searchapp.AuthUser
 import DataAttestation
 
@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat
 class DataAttestationController {
 
     def springSecurityService
+    def messageSource
 
     def index = {
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
@@ -18,7 +19,12 @@ class DataAttestationController {
     def agree = {
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
         DataAttestation.updateOrAddNewAgreementDate(user)
-        redirect(uri: '/RWG/index')
+        if (springSecurityService.currentUser.changePassword) {
+            flash.message = messageSource.getMessage('changePassword', new Objects[0], RequestContextUtils.getLocale(request))
+            redirect(controller: 'changeMyPassword')
+        } else {
+            redirect(uri: '/RWG/index')
+        }
     }
 
     def disagree = {

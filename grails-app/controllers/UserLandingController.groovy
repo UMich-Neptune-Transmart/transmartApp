@@ -30,8 +30,10 @@ class UserLandingController {
 
             def skip_disclaimer = grailsApplication.config.com.recomdata?.skipdisclaimer ?: false;
             if (skip_disclaimer) {
-                if (grailsApplication.config.com.recomdata?.defaults?.containsKey("landing"))
-                    redirect(uri: grailsApplication.config.com.recomdata.defaults.landing);
+                if (springSecurityService.currentUser.changePassword) {
+                    flash.message = messageSource.getMessage('changePassword', new Objects[0], RequestContextUtils.getLocale(request))
+                    redirect(controller: 'changeMyPassword')
+                }
                 else
                     redirect(uri: '/RWG');
             } else {
