@@ -35,7 +35,7 @@ class UserLandingController {
                     redirect(controller: 'changeMyPassword')
                 }
                 else
-                    redirect(uri: '/RWG');
+                    redirect(uri: '/datasetExplorer');
             } else {
                 redirect(uri: '/userLanding/disclaimer.gsp')
             }

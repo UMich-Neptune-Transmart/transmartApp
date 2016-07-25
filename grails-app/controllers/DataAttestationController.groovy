@@ -14,7 +14,7 @@ class DataAttestationController {
     	if (DataAttestation.needsDataAttestation(user))
             render(view:"attestation")
         else
-            redirect(uri:'/RWG/index');
+            redirect(uri:'/datasetExplorer/index');
     }
     def agree = {
         def user = AuthUser.findByUsername(springSecurityService.getPrincipal().username)
@@ -23,7 +23,7 @@ class DataAttestationController {
             flash.message = messageSource.getMessage('changePassword', new Objects[0], RequestContextUtils.getLocale(request))
             redirect(controller: 'changeMyPassword')
         } else {
-            redirect(uri: '/RWG/index')
+            redirect(uri: '/datasetExplorer/index')
         }
     }
 
