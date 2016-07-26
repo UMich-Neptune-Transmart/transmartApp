@@ -120,14 +120,6 @@
                                             </td>
                                         </tr>
                                         <tr>
-                                            <td>
-                                                <label for='remember_me' style="font-weight:bold">Remember me :</label>
-                                            </td>
-                                            <td>
-                                                <input type='checkbox' class='chk' name='_spring_security_remember_me' id='remember_me' />
-                                            </td>
-                                        </tr>
-                                        <tr>
                                             <td colspan=2 style="text-align:center">
                                                 <br>
                                                 <input type='submit' id='loginButton' value='Login' style="width:100%"/>
